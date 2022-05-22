@@ -2,7 +2,10 @@ module github.com/zicare/rgm
 
 go 1.18
 
-require github.com/spf13/viper v1.11.0
+require (
+	github.com/go-sql-driver/mysql v1.6.0
+	github.com/spf13/viper v1.11.0
+)
 
 require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect

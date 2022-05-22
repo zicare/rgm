@@ -6,6 +6,9 @@ import (
 
 	"github.com/zicare/rgm/config"
 	"github.com/zicare/rgm/msg"
+
+	//required
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var db *sql.DB
