@@ -63,8 +63,8 @@ func _init() {
 	msg["17"] = New("17", "Decoding Error %s")
 	msg["18"] = New("18", "No found!")
 	msg["19"] = New("19", "There are validation errors")
-	msg["20"] = New("20", "A minimum of %s calls/chcap required to calculate TPS")
-	msg["21"] = New("21", "TPS data clean up cycles must be %s seconds or longer")
+	msg["20"] = New("20", "TPS precision must be between %s and %s")
+	msg["21"] = New("21", "TTPS data clean up cycle freq must be between %s and %s minutes")
 	msg["22"] = New("22", "Time %s has a wrong format, required format is %s")
 	msg["23"] = New("23", "Value is a %s, required type is %s")
 	msg["24"] = New("24", "Value %s didn't pass %s(%s) validation")
@@ -73,4 +73,6 @@ func _init() {
 	msg["27"] = New("27", "Couldn't retrieve Gin's default validator engine")
 	msg["28"] = New("28", "Unauthorized app")
 	msg["29"] = New("29", "CORS tags are not properly set")
+	msg["30"] = New("30", "Auth tags are not properly set")
+	msg["31"] = New("31", "TPS penalty factor must be between %s and %s")
 }

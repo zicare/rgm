@@ -1,0 +1,32 @@
+{
+    "env": "test",
+    "pepper": "secret-random-string",
+    "hmac_key": "secret-hmac-key",
+    "jwt_duration" : "1h",
+    "server" : {
+        "ip": "127.0.0.1",
+        "domain": "localhost",
+        "port": 8080
+    },
+    "db": {
+        "host": "localhost",
+        "port": 3306,
+        "user": "dbuser",
+        "password": "secret",
+        "name": "dbname",
+        "max_open_conns": 5
+    },
+    "smtp": {
+        "host": "localhost",
+        "port": 587,
+        "user": "user@localhost",
+        "password": "secret",
+        "retries": 3,
+        "retry_interval": "1m"
+    },
+    "tps": {
+        "precision": 10,
+        "clean_up_cycle": 1,
+        "penalty_factor": 1
+    }
+}

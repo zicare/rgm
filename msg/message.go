@@ -38,7 +38,7 @@ func (m *Message) Error() string {
 func (m Message) String() string {
 
 	if m.Args != nil && len(m.Args) > 0 {
-		return fmt.Sprintf(m.Msg, m.Args)
+		return fmt.Sprintf(m.Msg, m.Args...)
 	}
 	return m.Msg
 }
