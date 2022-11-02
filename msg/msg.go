@@ -45,7 +45,7 @@ func _init() {
 	msg = make(map[string]Message)
 
 	msg["1"] = New("1", "Invalid message key")
-	msg["2"] = New("2", "ACL tags are not properly set")
+	msg["2"] = New("2", "%s tags not properly set")
 	msg["3"] = New("3", "HTTP basic authentication required")
 	msg["4"] = New("4", "Invalid credentials")
 	msg["5"] = New("5", "Something went wrong verifying your credentials")
@@ -72,7 +72,7 @@ func _init() {
 	msg["26"] = New("26", "Composite key missuse")
 	msg["27"] = New("27", "Couldn't retrieve Gin's default validator engine")
 	msg["28"] = New("28", "Unauthorized app")
-	msg["29"] = New("29", "CORS tags are not properly set")
-	msg["30"] = New("30", "Auth tags are not properly set")
+	//msg["29"] = New("29", "CORS tags are not properly set")
+	//msg["30"] = New("30", "Auth tags no set")
 	msg["31"] = New("31", "TPS penalty factor must be between %s and %s")
 }

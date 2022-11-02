@@ -1,9 +1,28 @@
 package db
 
+import "github.com/gin-gonic/gin"
+
 //Table exported
 type Table interface {
-	New() Table
-	Table() string
-	View() string
-	Value() interface{}
+
+	// Must return the table name
+	Name() string
+
+	// Must fetch foreign table data if available
+	Dig(c *gin.Context)
+
+	// Must set conditions to filter out content
+	// not intended for the user making the request
+	Scope(c *gin.Context) map[string]string
 }
+
+type BaseTable struct{}
+
+//Scope exported
+func (BaseTable) Scope(c *gin.Context) map[string]string {
+
+	return make(map[string]string)
+}
+
+//Dig exported
+func (BaseTable) Dig(c *gin.Context) {}

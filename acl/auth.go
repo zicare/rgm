@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zicare/rgm/lib"
 	"github.com/zicare/rgm/msg"
 	"github.com/zicare/rgm/tps"
 
@@ -43,14 +42,14 @@ func BasicAuth(m db.Table) gin.HandlerFunc {
 		}
 
 		//get m table's auth-related field names
-		f, err := lib.TaggedFields(m, "auth", []string{"id", "role", "tps", "usr", "pwd", "from", "to"})
+		f, err := db.TaggedFields(m, "auth", []string{"id", "role", "tps", "usr", "pwd", "from", "to"})
 		if err != nil {
-			abort(c, 500, msg.Get("30")) //Auth tags are not properly set
+			abort(c, 500, msg.Get("2").SetArgs("Auth")) //Auth tags are not properly set
 			return
 		}
 
 		//find user
-		sb := ms.SelectFrom(m.View())
+		sb := ms.SelectFrom(m.Name())
 		sb.Select(f...)
 		sb.Where(sb.Equal(f[3], username), sb.IsNotNull(f[1]))
 		sql, args := sb.Build()
@@ -58,7 +57,7 @@ func BasicAuth(m db.Table) gin.HandlerFunc {
 			abort(c, 401, msg.Get("4")) //Invalid credentials
 			return
 		}
-		u.Src = m.Table()
+		u.Src = m.Name()
 
 		//pwd creation
 		//hashedBytes, _ := bcrypt.GenerateFromPassword([]byte(password+pepper), bcrypt.DefaultCost)
@@ -164,6 +163,17 @@ func abort(c *gin.Context, code int, msg msg.Message) {
 	c.Abort()
 }
 
+// Returns the authentiated JWT's Payload.Id
+func UserID(c *gin.Context) int64 {
+
+	if jp, exists := c.Get("Auth"); !exists {
+		return 0
+	} else if py, ok := jp.(jwt.Payload); ok {
+		return py.Id
+	}
+	return 0
+}
+
 /*
 //TsAndUserID exported
 func TsAndUserID(c *gin.Context) (*time.Time, *int64) {
@@ -175,17 +185,6 @@ func TsAndUserID(c *gin.Context) (*time.Time, *int64) {
 		return &ts, &py.UserID
 	}
 	return &ts, nil
-}
-
-//UserID exported
-func UserID(c *gin.Context) int64 {
-
-	if jp, exists := c.Get("Auth"); !exists {
-		return 0
-	} else if py, ok := jp.(JwtPayload); ok {
-		return py.UserID
-	}
-	return 0
 }
 
 //RoleID exported

@@ -39,13 +39,13 @@ func Init(m db.Table) (err error) {
 	)
 
 	//get m table's acl-related field names
-	f, err := lib.TaggedFields(m, "acl", []string{"role", "route", "method", "from", "to"})
+	f, err := db.TaggedFields(m, "acl", []string{"role", "route", "method", "from", "to"})
 	if err != nil {
-		return msg.Get("2").M2E() //ACL tags are not properly set
+		return msg.Get("2").SetArgs("ACL").M2E() //ACL tags are not properly set
 	}
 
 	//fetch all grants
-	sb.From(m.View())
+	sb.From(m.Name())
 	sb.Select(f...)
 	sb.Where(
 		sb.LessThan(f[3], now),
