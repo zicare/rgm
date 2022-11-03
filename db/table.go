@@ -1,6 +1,17 @@
 package db
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
+
+//TableMeta exported
+type TableMeta struct {
+	Fields   []string
+	Primary  []string
+	Serial   []string
+	View     []string
+	Writable []string
+}
 
 //Table exported
 type Table interface {
@@ -9,7 +20,7 @@ type Table interface {
 	Name() string
 
 	// Must fetch foreign table data if available
-	Dig(c *gin.Context)
+	//Dig(c *gin.Context)
 
 	// Must set conditions to filter out content
 	// not intended for the user making the request
@@ -18,11 +29,11 @@ type Table interface {
 
 type BaseTable struct{}
 
-//Scope exported
+// Scope exported
 func (BaseTable) Scope(c *gin.Context) map[string]string {
 
 	return make(map[string]string)
 }
 
-//Dig exported
-func (BaseTable) Dig(c *gin.Context) {}
+// Dig exported
+//func (BaseTable) Dig(c *gin.Context) {}

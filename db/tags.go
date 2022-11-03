@@ -7,6 +7,37 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
+// Returns the TableMeta object for tbl param.
+// The underlying tbl struct must be properly annotated
+// with Table related tags. TableMeta supports the
+// tags: db, pk, view, serial.
+func GetTableMeta(tbl Table) (meta TableMeta) {
+
+	t := reflect.ValueOf(tbl).Elem()
+
+	for i := 0; i < t.NumField(); i++ {
+		if col, ok := t.Type().Field(i).Tag.Lookup("db"); ok && (col != "-") {
+			meta.Fields = append(meta.Fields, col)
+			//check for primary
+			if pk, _ := t.Type().Field(i).Tag.Lookup("pk"); pk == "1" {
+				meta.Primary = append(meta.Primary, col)
+			}
+			//check for serial
+			if serial, _ := t.Type().Field(i).Tag.Lookup("serial"); serial == "1" {
+				meta.Serial = append(meta.Serial, col)
+			}
+			//check for view or writable
+			if view, ok := t.Type().Field(i).Tag.Lookup("view"); !ok {
+				meta.Writable = append(meta.Writable, col)
+			} else if view == "1" {
+				meta.View = append(meta.View, col)
+			}
+		}
+	}
+
+	return
+}
+
 // TaggedFields returns a slice of db fields sharing a tag name (tn)
 // such fields must be tagged as tn:"tv"
 // the tagName value is passed in the tn parameter
@@ -20,11 +51,11 @@ import (
 // v ar m User
 // f, _ := TaggedFields(m, "auth", []string{"id","role","usr"})
 // f -> []string{"user_id","role_id","email"}
-func TaggedFields(m Table, tagName string, tagValues []string) ([]string, error) {
+func TaggedFields(tbl Table, tagName string, tagValues []string) ([]string, error) {
 
 	var (
 		f = make([]string, len(tagValues))
-		t = reflect.Indirect(reflect.ValueOf(m))
+		t = reflect.ValueOf(tbl).Elem()
 	)
 
 	for i := 0; i < t.NumField(); i++ {
@@ -49,9 +80,10 @@ func TaggedFields(m Table, tagName string, tagValues []string) ([]string, error)
 	return f, nil
 }
 
-func Pk(m Table) (f []string) {
+// Returns a slice of db fields tagged as `pk:"1"`
+func Pk(tbl Table) (f []string) {
 
-	var t = reflect.Indirect(reflect.ValueOf(m))
+	t := reflect.ValueOf(tbl).Elem()
 
 	for i := 0; i < t.NumField(); i++ {
 		if tag, ok := t.Type().Field(i).Tag.Lookup("pk"); ok {

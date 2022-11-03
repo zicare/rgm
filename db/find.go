@@ -8,18 +8,24 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
-func Find(c *gin.Context, tbl Table, whereMap map[string]string) error {
+func Find(c *gin.Context, tbl Table) error {
 
 	var (
-		ms = sqlbuilder.NewStruct(tbl).For(sqlbuilder.MySQL)
-		sb = ms.SelectFrom(tbl.Name())
+		where, err = GetFindOptions(c, tbl)
+		ms         = sqlbuilder.NewStruct(tbl).For(sqlbuilder.MySQL)
+		sb         = ms.SelectFrom(tbl.Name())
 	)
 
-	for k, v := range whereMap {
-		sb.Where(sb.Equal(k, v))
+	if err != nil {
+		//ParamError
+		return err
 	}
 
 	for k, v := range tbl.Scope(c) {
+		sb.Where(sb.Equal(k, v))
+	}
+
+	for k, v := range where {
 		sb.Where(sb.Equal(k, v))
 	}
 
@@ -33,7 +39,7 @@ func Find(c *gin.Context, tbl Table, whereMap map[string]string) error {
 		return msg.Get("25").SetArgs(err.Error()).M2E()
 	}
 
-	tbl.Dig(c)
+	//tbl.Dig(c)
 
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
-func IDbind(c *gin.Context, t Table) (map[string]string, *ParamError) {
+func GetFindOptions(c *gin.Context, t Table) (map[string]string, *ParamError) {
 
 	var (
 		m = make(map[string]string)
@@ -16,7 +16,7 @@ func IDbind(c *gin.Context, t Table) (map[string]string, *ParamError) {
 	)
 
 	if len(k) != len(v) {
-		e := ParamError{Message: msg.Get("26")}
+		e := ParamError{msg.Get("26")}
 		return m, &e
 	}
 
