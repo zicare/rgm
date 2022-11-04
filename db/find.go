@@ -39,7 +39,30 @@ func Find(c *gin.Context, tbl Table) error {
 		return msg.Get("25").SetArgs(err.Error()).M2E()
 	}
 
-	//tbl.Dig(c)
+	tbl.Dig(c)
 
+	return nil
+}
+
+// Dig exported
+func ByID(tbl Table, where map[string]string) error {
+
+	var (
+		ms = sqlbuilder.NewStruct(tbl).For(sqlbuilder.MySQL)
+		sb = ms.SelectFrom(tbl.Name())
+	)
+
+	for k, v := range where {
+		sb.Where(sb.Equal(k, v))
+	}
+
+	q, args := sb.Build()
+	if err := Db().QueryRow(q, args...).Scan(ms.Addr(&tbl)...); err == sql.ErrNoRows {
+		e := NotFoundError{Message: msg.Get("18")} //Not found!
+		return &e
+	} else if err != nil {
+		//Server error: %s
+		return msg.Get("25").SetArgs(err.Error()).M2E()
+	}
 	return nil
 }

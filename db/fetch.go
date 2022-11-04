@@ -91,7 +91,6 @@ func Fetch(c *gin.Context, tbl Table) (ResultSetMeta, []interface{}, error) {
 
 	// build the sql
 	sql, args = sb.Build()
-	fmt.Println(sql, args)
 
 	// execute query
 	rows, err := Db().Query(sql, args...)

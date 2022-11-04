@@ -20,7 +20,7 @@ type Table interface {
 	Name() string
 
 	// Must fetch foreign table data if available
-	//Dig(c *gin.Context)
+	Dig(c *gin.Context)
 
 	// Must set conditions to filter out content
 	// not intended for the user making the request
@@ -36,4 +36,4 @@ func (BaseTable) Scope(c *gin.Context) map[string]string {
 }
 
 // Dig exported
-//func (BaseTable) Dig(c *gin.Context) {}
+func (BaseTable) Dig(c *gin.Context) {}
