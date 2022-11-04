@@ -44,9 +44,24 @@ func Fetch(c *gin.Context, tbl Table) (ResultSetMeta, []interface{}, error) {
 		sb.Where(sb.IsNotNull(j))
 	}
 
+	// set where In
+	for k, v := range fo.In {
+		sb.Where(sb.In(k, v...))
+	}
+
+	// set where NotIn
+	for k, v := range fo.NotIn {
+		sb.Where(sb.NotIn(k, v...))
+	}
+
 	// set where Equal
 	for k, v := range fo.Equal {
 		sb.Where(sb.Equal(k, v))
+	}
+
+	// set where NotEqual
+	for k, v := range fo.NotEqual {
+		sb.Where(sb.NotEqual(k, v))
 	}
 
 	// set where GreaterThan

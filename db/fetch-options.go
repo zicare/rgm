@@ -15,7 +15,10 @@ type FetchOptions struct {
 	Column           []string
 	IsNull           []string
 	IsNotNull        []string
+	In               map[string][]interface{}
+	NotIn            map[string][]interface{}
 	Equal            map[string]string
+	NotEqual         map[string]string
 	GreaterThan      map[string]string
 	LessThan         map[string]string
 	GreaterEqualThan map[string]string
@@ -38,7 +41,10 @@ func GetFetchOptions(c *gin.Context, tbl Table) *FetchOptions {
 	fo.setColumn(param, meta)
 	fo.setIsNull(param, meta)
 	fo.setIsNotNull(param, meta)
+	fo.setIn(param, meta)
+	fo.setNotIn(param, meta)
 	fo.setEqual(param, meta)
+	fo.setNotEqual(param, meta)
 	fo.setGreaterThan(param, meta)
 	fo.setLessThan(param, meta)
 	fo.setGreaterEqualThan(param, meta)
@@ -105,6 +111,38 @@ func (so *FetchOptions) setIsNotNull(param url.Values, meta TableMeta) {
 	}
 }
 
+func (so *FetchOptions) setIn(param url.Values, meta TableMeta) {
+
+	so.In = make(map[string][]interface{})
+
+	if i, ok := param["in"]; ok {
+		for _, k := range i {
+			j := strings.Split(k, "|")
+			if lib.Contains(meta.Fields, j[0]) {
+				for _, v := range strings.Split(j[1], ",") {
+					so.In[j[0]] = append(so.In[j[0]], v)
+				}
+			}
+		}
+	}
+}
+
+func (so *FetchOptions) setNotIn(param url.Values, meta TableMeta) {
+
+	so.NotIn = make(map[string][]interface{})
+
+	if i, ok := param["notin"]; ok {
+		for _, k := range i {
+			j := strings.Split(k, "|")
+			if lib.Contains(meta.Fields, j[0]) {
+				for _, v := range strings.Split(j[1], ",") {
+					so.NotIn[j[0]] = append(so.NotIn[j[0]], v)
+				}
+			}
+		}
+	}
+}
+
 func (so *FetchOptions) setEqual(param url.Values, meta TableMeta) {
 
 	so.Equal = make(map[string]string)
@@ -114,6 +152,20 @@ func (so *FetchOptions) setEqual(param url.Values, meta TableMeta) {
 			j := strings.Split(k, "|")
 			if lib.Contains(meta.Fields, j[0]) {
 				so.Equal[j[0]] = j[1]
+			}
+		}
+	}
+}
+
+func (so *FetchOptions) setNotEqual(param url.Values, meta TableMeta) {
+
+	so.NotEqual = make(map[string]string)
+
+	if i, ok := param["noteq"]; ok {
+		for _, k := range i {
+			j := strings.Split(k, "|")
+			if lib.Contains(meta.Fields, j[0]) {
+				so.NotEqual[j[0]] = j[1]
 			}
 		}
 	}
