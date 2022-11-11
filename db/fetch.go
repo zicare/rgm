@@ -6,31 +6,30 @@ import (
 	"hash/crc32"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/zicare/rgm/lib"
 	"github.com/zicare/rgm/msg"
 )
 
-//ResultSetMeta exported
-type ResultSetMeta struct {
+// FetchResultSetMeta exported
+type FetchResultSetMeta struct {
 	Range    string
 	Checksum string
 }
 
-func Fetch(c *gin.Context, tbl Table) (ResultSetMeta, []interface{}, error) {
+// Fetch exported
+func Fetch(fo *FetchOptions) (FetchResultSetMeta, []interface{}, error) {
 
 	var (
-		fo      = GetFetchOptions(c, tbl)
-		meta    = ResultSetMeta{Range: "*/*", Checksum: "*"}
+		meta    = FetchResultSetMeta{Range: "*/*", Checksum: "*"}
 		total   int
 		results []interface{}
-		ms      = sqlbuilder.NewStruct(tbl).For(sqlbuilder.MySQL)
-		sb      = ms.SelectFrom(tbl.Name())
+		ms      = sqlbuilder.NewStruct(fo.Table).For(sqlbuilder.MySQL)
+		sb      = ms.SelectFrom(fo.Table.Name())
 	)
 
 	// set where scope
-	for k, v := range tbl.Scope(c) {
+	for k, v := range fo.Table.Scope(fo.UID) {
 		sb.Where(sb.Equal(k, v))
 	}
 
@@ -116,12 +115,14 @@ func Fetch(c *gin.Context, tbl Table) (ResultSetMeta, []interface{}, error) {
 
 	// iterate results
 	for rows.Next() {
-		if err := rows.Scan(ms.AddrWithCols(fo.Column, &tbl)...); err != nil {
+		if err := rows.Scan(ms.AddrWithCols(fo.Column, &fo.Table)...); err != nil {
 			//Server error: %s
 			return meta, results, msg.Get("25").SetArgs(err).M2E()
 		}
-		//tbl.Dig(c)
-		results = append(results, lib.DeRefPtr(tbl))
+		if fo.Dig == 1 {
+			fo.Table.Dig()
+		}
+		results = append(results, lib.DeRefPtr(fo.Table))
 	}
 
 	// check for iteration errors
@@ -131,7 +132,7 @@ func Fetch(c *gin.Context, tbl Table) (ResultSetMeta, []interface{}, error) {
 		return meta, results, msg.Get("25").SetArgs(err).M2E()
 	}
 
-	// Response headers meta
+	// response headers meta
 	from := fo.Offset + 1
 	to := fo.Offset + len(results)
 	meta.Range = fmt.Sprintf("%v-%v/%v", from, to, total)

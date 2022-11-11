@@ -1,10 +1,6 @@
 package db
 
-import (
-	"github.com/gin-gonic/gin"
-)
-
-//TableMeta exported
+// TableMeta exported
 type TableMeta struct {
 	Fields   []string
 	Primary  []string
@@ -13,27 +9,27 @@ type TableMeta struct {
 	Writable []string
 }
 
-//Table exported
+// Table exported
 type Table interface {
 
 	// Must return the table name
 	Name() string
 
-	// Must fetch foreign table data if available
-	Dig(c *gin.Context)
+	// Must attach foreign table data if available
+	Dig()
 
 	// Must set conditions to filter out content
 	// not intended for the user making the request
-	Scope(c *gin.Context) map[string]string
+	Scope(uid string) map[string]string
 }
 
 type BaseTable struct{}
 
 // Scope exported
-func (BaseTable) Scope(c *gin.Context) map[string]string {
+func (BaseTable) Scope(uid string) map[string]string {
 
 	return make(map[string]string)
 }
 
 // Dig exported
-func (BaseTable) Dig(c *gin.Context) {}
+func (BaseTable) Dig() {}

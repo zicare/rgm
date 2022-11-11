@@ -2,67 +2,56 @@ package db
 
 import (
 	"database/sql"
+	"encoding/json"
+	"hash/crc32"
+	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/zicare/rgm/msg"
 )
 
-func Find(c *gin.Context, tbl Table) error {
+// FindResultSetMeta exported
+type FindResultSetMeta struct {
+	Checksum string
+}
+
+// Find exported
+func Find(fo *FindOptions) (FindResultSetMeta, interface{}, error) {
 
 	var (
-		where, err = GetFindOptions(c, tbl)
-		ms         = sqlbuilder.NewStruct(tbl).For(sqlbuilder.MySQL)
-		sb         = ms.SelectFrom(tbl.Name())
+		meta = FindResultSetMeta{Checksum: "*"}
+		ms   = sqlbuilder.NewStruct(fo.Table).For(sqlbuilder.MySQL)
+		sb   = ms.SelectFrom(fo.Table.Name())
 	)
 
-	if err != nil {
-		//ParamError
-		return err
-	}
-
-	for k, v := range tbl.Scope(c) {
+	for k, v := range fo.Table.Scope(fo.UID) {
 		sb.Where(sb.Equal(k, v))
 	}
 
-	for k, v := range where {
+	for k, v := range fo.Where {
 		sb.Where(sb.Equal(k, v))
 	}
 
 	q, args := sb.Build()
 	//log.Println(q, args)
-	if err := Db().QueryRow(q, args...).Scan(ms.Addr(&tbl)...); err == sql.ErrNoRows {
+	if err := Db().QueryRow(q, args...).Scan(ms.Addr(&fo.Table)...); err == sql.ErrNoRows {
 		e := NotFoundError{Message: msg.Get("18")} //Not found!
-		return &e
+		return meta, fo.Table, &e
 	} else if err != nil {
 		//Server error: %s
-		return msg.Get("25").SetArgs(err.Error()).M2E()
+		return meta, fo.Table, msg.Get("25").SetArgs(err.Error()).M2E()
 	}
 
-	tbl.Dig(c)
-
-	return nil
-}
-
-// Dig exported
-func ByID(tbl Table, where map[string]string) error {
-
-	var (
-		ms = sqlbuilder.NewStruct(tbl).For(sqlbuilder.MySQL)
-		sb = ms.SelectFrom(tbl.Name())
-	)
-
-	for k, v := range where {
-		sb.Where(sb.Equal(k, v))
+	if fo.Dig == 1 {
+		fo.Table.Dig()
 	}
 
-	q, args := sb.Build()
-	if err := Db().QueryRow(q, args...).Scan(ms.Addr(&tbl)...); err == sql.ErrNoRows {
-		e := NotFoundError{Message: msg.Get("18")} //Not found!
-		return &e
-	} else if err != nil {
-		//Server error: %s
-		return msg.Get("25").SetArgs(err.Error()).M2E()
+	// Response headers meta
+	if fo.Checksum == 1 {
+		bytes, _ := json.Marshal(fo.Table)
+		checksum := crc32.ChecksumIEEE([]byte(bytes))
+		meta.Checksum = strconv.FormatUint(uint64(checksum), 16)
 	}
-	return nil
+
+	return meta, fo.Table, nil
 }
