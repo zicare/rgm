@@ -24,16 +24,20 @@ func Find(fo *FindOptions) (FindResultSetMeta, interface{}, error) {
 		sb   = ms.SelectFrom(fo.Table.Name())
 	)
 
-	for k, v := range fo.Table.Scope(fo.UID) {
+	// set where scope
+	for k, v := range fo.Table.Scope(fo.UID, fo.Parents...) {
 		sb.Where(sb.Equal(k, v))
 	}
 
+	// set where Equal
 	for k, v := range fo.Where {
 		sb.Where(sb.Equal(k, v))
 	}
 
+	// build the sql
 	q, args := sb.Build()
-	//log.Println(q, args)
+
+	// execute query
 	if err := Db().QueryRow(q, args...).Scan(ms.Addr(&fo.Table)...); err == sql.ErrNoRows {
 		e := NotFoundError{Message: msg.Get("18")} //Not found!
 		return meta, fo.Table, &e

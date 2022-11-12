@@ -18,13 +18,13 @@ func Init() error {
 
 	var (
 		err  error
-		c    = config.Config()
+		cf   = config.Config()
 		conn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
-			c.GetString("db.user"),
-			c.GetString("db.password"),
-			c.GetString("db.host"),
-			c.GetString("db.port"),
-			c.GetString("db.name"))
+			cf.GetString("db.user"),
+			cf.GetString("db.password"),
+			cf.GetString("db.host"),
+			cf.GetString("db.port"),
+			cf.GetString("db.name"))
 	)
 
 	db, err = sql.Open("mysql", conn)
@@ -39,7 +39,7 @@ func Init() error {
 		return msg.Get("25").SetArgs(err.Error()).M2E()
 	}
 
-	db.SetMaxOpenConns(c.GetInt("db.max_open_conns"))
+	db.SetMaxOpenConns(cf.GetInt("db.max_open_conns"))
 
 	return nil
 }

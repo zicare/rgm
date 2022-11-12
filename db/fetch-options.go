@@ -33,7 +33,7 @@ type FetchOptions struct {
 }
 
 // FetchOptionsFactory exported
-func FetchOptionsFactory(tbl Table, uid string, param url.Values, parents ...Table) *FetchOptions {
+func FetchOptionsFactory(tbl Table, uid string, qparam url.Values, parents ...Table) *FetchOptions {
 
 	var (
 		fo   = new(FetchOptions)
@@ -43,21 +43,22 @@ func FetchOptionsFactory(tbl Table, uid string, param url.Values, parents ...Tab
 	fo.setTable(tbl)
 	fo.setUID(uid)
 	fo.setParents(parents...)
-	fo.setColumn(param, meta)
-	fo.setIsNull(param, meta)
-	fo.setIsNotNull(param, meta)
-	fo.setIn(param, meta)
-	fo.setNotIn(param, meta)
-	fo.setEqual(param, meta)
-	fo.setNotEqual(param, meta)
-	fo.setGreaterThan(param, meta)
-	fo.setLessThan(param, meta)
-	fo.setGreaterEqualThan(param, meta)
-	fo.setLessEqualThan(param, meta)
-	fo.setOrder(param, meta)
-	fo.setOffsetAndLimit(param)
-	fo.setChecksum(param)
-	fo.setDig(param)
+	fo.setColumn(meta)
+	fo.setIsNull(qparam, meta)
+	fo.setIsNotNull(qparam, meta)
+	fo.setIn(qparam, meta)
+	fo.setNotIn(qparam, meta)
+	fo.setEqual(qparam, meta)
+	fo.setNotEqual(qparam, meta)
+	fo.setGreaterThan(qparam, meta)
+	fo.setLessThan(qparam, meta)
+	fo.setGreaterEqualThan(qparam, meta)
+	fo.setLessEqualThan(qparam, meta)
+	fo.setOrder(qparam, meta)
+	fo.setOffset(qparam)
+	fo.setLimit(qparam)
+	fo.setChecksum(qparam)
+	fo.setDig(qparam)
 
 	return fo
 }
@@ -77,67 +78,43 @@ func (fo *FetchOptions) setParents(parents ...Table) {
 	fo.Parents = parents
 }
 
-func (fo *FetchOptions) setColumn(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setColumn(meta TableMeta) {
 
-	fo.Column = []string{}
-
-	if i, ok := param["cols"]; ok {
-		j := strings.Split(i[0], ",")
-		for _, v := range j {
-			if lib.Contains(meta.Fields, v) {
-				fo.Column = append(fo.Column, v)
-			}
-		}
-	} else {
-		fo.Column = meta.Fields
-	}
-
-	//xcols
-	if i, ok := param["xcols"]; ok {
-		fo.Column = lib.Diff(fo.Column, strings.Split(i[0], ","))
-	}
+	fo.Column = meta.Fields
 }
 
-func (fo *FetchOptions) setIsNull(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setIsNull(qparam url.Values, meta TableMeta) {
 
 	fo.IsNull = []string{}
 
-	if i, ok := param["isnull"]; ok {
-		colsAux := make(map[string]string)
-		for _, v := range strings.Split(i[0], ",") {
-			colsAux[v] = v
-		}
+	if isnull, ok := qparam["isnull"]; ok {
 		for _, k := range meta.Fields {
-			if _, ok := colsAux[k]; ok {
+			if lib.Contains(isnull, k) {
 				fo.IsNull = append(fo.IsNull, k)
 			}
 		}
 	}
 }
 
-func (fo *FetchOptions) setIsNotNull(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setIsNotNull(qparam url.Values, meta TableMeta) {
 
 	fo.IsNotNull = []string{}
 
-	if i, ok := param["notnull"]; ok {
-		colsAux := make(map[string]string)
-		for _, v := range strings.Split(i[0], ",") {
-			colsAux[v] = v
-		}
+	if notnull, ok := qparam["notnull"]; ok {
 		for _, k := range meta.Fields {
-			if _, ok := colsAux[k]; ok {
-				fo.IsNotNull = append(fo.IsNotNull, k)
+			if lib.Contains(notnull, k) {
+				fo.IsNull = append(fo.IsNotNull, k)
 			}
 		}
 	}
 }
 
-func (fo *FetchOptions) setIn(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setIn(qparam url.Values, meta TableMeta) {
 
 	fo.In = make(map[string][]interface{})
 
-	if i, ok := param["in"]; ok {
-		for _, k := range i {
+	if in, ok := qparam["in"]; ok {
+		for _, k := range in {
 			j := strings.Split(k, "|")
 			if lib.Contains(meta.Fields, j[0]) {
 				for _, v := range strings.Split(j[1], ",") {
@@ -148,12 +125,12 @@ func (fo *FetchOptions) setIn(param url.Values, meta TableMeta) {
 	}
 }
 
-func (fo *FetchOptions) setNotIn(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setNotIn(qparam url.Values, meta TableMeta) {
 
 	fo.NotIn = make(map[string][]interface{})
 
-	if i, ok := param["notin"]; ok {
-		for _, k := range i {
+	if notin, ok := qparam["notin"]; ok {
+		for _, k := range notin {
 			j := strings.Split(k, "|")
 			if lib.Contains(meta.Fields, j[0]) {
 				for _, v := range strings.Split(j[1], ",") {
@@ -164,12 +141,12 @@ func (fo *FetchOptions) setNotIn(param url.Values, meta TableMeta) {
 	}
 }
 
-func (fo *FetchOptions) setEqual(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setEqual(qparam url.Values, meta TableMeta) {
 
 	fo.Equal = make(map[string]string)
 
-	if i, ok := param["eq"]; ok {
-		for _, k := range i {
+	if eq, ok := qparam["eq"]; ok {
+		for _, k := range eq {
 			j := strings.Split(k, "|")
 			if lib.Contains(meta.Fields, j[0]) {
 				fo.Equal[j[0]] = j[1]
@@ -178,12 +155,12 @@ func (fo *FetchOptions) setEqual(param url.Values, meta TableMeta) {
 	}
 }
 
-func (fo *FetchOptions) setNotEqual(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setNotEqual(qparam url.Values, meta TableMeta) {
 
 	fo.NotEqual = make(map[string]string)
 
-	if i, ok := param["noteq"]; ok {
-		for _, k := range i {
+	if noteq, ok := qparam["noteq"]; ok {
+		for _, k := range noteq {
 			j := strings.Split(k, "|")
 			if lib.Contains(meta.Fields, j[0]) {
 				fo.NotEqual[j[0]] = j[1]
@@ -192,12 +169,12 @@ func (fo *FetchOptions) setNotEqual(param url.Values, meta TableMeta) {
 	}
 }
 
-func (fo *FetchOptions) setGreaterThan(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setGreaterThan(qparam url.Values, meta TableMeta) {
 
 	fo.GreaterThan = make(map[string]string)
 
-	if i, ok := param["gt"]; ok {
-		for _, k := range i {
+	if gt, ok := qparam["gt"]; ok {
+		for _, k := range gt {
 			j := strings.Split(k, "|")
 			if lib.Contains(meta.Fields, j[0]) {
 				fo.GreaterThan[j[0]] = j[1]
@@ -206,12 +183,12 @@ func (fo *FetchOptions) setGreaterThan(param url.Values, meta TableMeta) {
 	}
 }
 
-func (fo *FetchOptions) setLessThan(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setLessThan(qparam url.Values, meta TableMeta) {
 
 	fo.LessThan = make(map[string]string)
 
-	if i, ok := param["lt"]; ok {
-		for _, k := range i {
+	if lt, ok := qparam["lt"]; ok {
+		for _, k := range lt {
 			j := strings.Split(k, "|")
 			if lib.Contains(meta.Fields, j[0]) {
 				fo.LessThan[j[0]] = j[1]
@@ -220,12 +197,12 @@ func (fo *FetchOptions) setLessThan(param url.Values, meta TableMeta) {
 	}
 }
 
-func (fo *FetchOptions) setGreaterEqualThan(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setGreaterEqualThan(qparam url.Values, meta TableMeta) {
 
 	fo.GreaterEqualThan = make(map[string]string)
 
-	if i, ok := param["gteq"]; ok {
-		for _, k := range i {
+	if gteq, ok := qparam["gteq"]; ok {
+		for _, k := range gteq {
 			j := strings.Split(k, "|")
 			if lib.Contains(meta.Fields, j[0]) {
 				fo.GreaterEqualThan[j[0]] = j[1]
@@ -234,12 +211,12 @@ func (fo *FetchOptions) setGreaterEqualThan(param url.Values, meta TableMeta) {
 	}
 }
 
-func (fo *FetchOptions) setLessEqualThan(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setLessEqualThan(qparam url.Values, meta TableMeta) {
 
 	fo.LessEqualThan = make(map[string]string)
 
-	if i, ok := param["lteq"]; ok {
-		for _, k := range i {
+	if lteq, ok := qparam["lteq"]; ok {
+		for _, k := range lteq {
 			j := strings.Split(k, "|")
 			if lib.Contains(meta.Fields, j[0]) {
 				fo.LessEqualThan[j[0]] = j[1]
@@ -248,13 +225,12 @@ func (fo *FetchOptions) setLessEqualThan(param url.Values, meta TableMeta) {
 	}
 }
 
-func (fo *FetchOptions) setOrder(param url.Values, meta TableMeta) {
+func (fo *FetchOptions) setOrder(qparam url.Values, meta TableMeta) {
 
 	fo.Order = []string{}
 
-	if i, ok := param["order"]; ok {
-		j := strings.Split(i[0], ";")
-		for _, k := range j {
+	if order, ok := qparam["order"]; ok {
+		for _, k := range order {
 			j := strings.Split(k, "|")
 			if !lib.Contains(meta.Fields, j[0]) {
 				continue
@@ -267,22 +243,23 @@ func (fo *FetchOptions) setOrder(param url.Values, meta TableMeta) {
 	}
 }
 
-func (fo *FetchOptions) setOffsetAndLimit(param url.Values) {
+func (fo *FetchOptions) setOffset(qparam url.Values) {
 
-	//offset and limit
-	fo.Offset = 0
+	if offset, ok := qparam["offset"]; ok {
+		fo.Offset, _ = strconv.Atoi(offset[0])
+	} else {
+		fo.Offset = 0
+	}
+}
+
+func (fo *FetchOptions) setLimit(qparam url.Values) {
+
 	fo.Limit = config.Config().GetInt("param.icpp")
 
-	if i, ok := param["limit"]; ok {
-		j := strings.Split(i[0], ",")
-		switch len(j) {
-		case 1:
-			fo.Offset = 0
-			fo.Limit, _ = strconv.Atoi(j[0])
-		case 2:
-			fo.Offset, _ = strconv.Atoi(j[0])
-			fo.Limit, _ = strconv.Atoi(j[1])
-		}
+	if limit, ok := qparam["limit"]; ok {
+		fo.Limit, _ = strconv.Atoi(limit[0])
+	} else {
+		fo.Limit = config.Config().GetInt("param.icpp")
 	}
 }
 

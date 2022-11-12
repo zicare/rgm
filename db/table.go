@@ -19,7 +19,8 @@ type Table interface {
 	Dig()
 
 	// Must set conditions to filter out content
-	// not intended for the user making the request
+	// not intended for the user uid making the request
+	// or not a child of optional parent t records
 	Scope(uid string, t ...Table) map[string]string
 }
 

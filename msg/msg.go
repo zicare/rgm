@@ -69,7 +69,7 @@ func _init() {
 	msg["23"] = New("23", "Value is a %s, required type is %s")
 	msg["24"] = New("24", "Value %s didn't pass %s(%s) validation")
 	msg["25"] = New("25", "Server error: %s")
-	msg["26"] = New("26", "Composite key missuse")
+	msg["26"] = New("26", "Url param missuse")
 	msg["27"] = New("27", "Couldn't retrieve Gin's default validator engine")
 	msg["28"] = New("28", "Unauthorized app")
 	//msg["29"] = New("29", "CORS tags are not properly set")
