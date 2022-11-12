@@ -20,13 +20,13 @@ type Table interface {
 
 	// Must set conditions to filter out content
 	// not intended for the user making the request
-	Scope(uid string) map[string]string
+	Scope(uid string, t ...Table) map[string]string
 }
 
 type BaseTable struct{}
 
 // Scope exported
-func (BaseTable) Scope(uid string) map[string]string {
+func (BaseTable) Scope(uid string, t ...Table) map[string]string {
 
 	return make(map[string]string)
 }

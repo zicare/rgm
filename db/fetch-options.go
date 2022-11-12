@@ -12,6 +12,8 @@ import (
 // FetchOptions exported
 type FetchOptions struct {
 	Table            Table
+	UID              string  // ID from jwt, used to set scope in find, fetch, etc.
+	Parents          []Table // Also used to set scope in find, fetch, etc.
 	Column           []string
 	IsNull           []string
 	IsNotNull        []string
@@ -27,12 +29,11 @@ type FetchOptions struct {
 	Offset           int
 	Limit            int
 	Checksum         int
-	Dig              int
-	UID              string
+	Dig              int // Flag used to include (or not) parent data in find, fetch, etc.
 }
 
 // FetchOptionsFactory exported
-func FetchOptionsFactory(tbl Table, uid string, param url.Values) *FetchOptions {
+func FetchOptionsFactory(tbl Table, uid string, param url.Values, parents ...Table) *FetchOptions {
 
 	var (
 		fo   = new(FetchOptions)
@@ -40,6 +41,8 @@ func FetchOptionsFactory(tbl Table, uid string, param url.Values) *FetchOptions 
 	)
 
 	fo.setTable(tbl)
+	fo.setUID(uid)
+	fo.setParents(parents...)
 	fo.setColumn(param, meta)
 	fo.setIsNull(param, meta)
 	fo.setIsNotNull(param, meta)
@@ -55,7 +58,6 @@ func FetchOptionsFactory(tbl Table, uid string, param url.Values) *FetchOptions 
 	fo.setOffsetAndLimit(param)
 	fo.setChecksum(param)
 	fo.setDig(param)
-	fo.setUID(uid)
 
 	return fo
 }
@@ -63,6 +65,16 @@ func FetchOptionsFactory(tbl Table, uid string, param url.Values) *FetchOptions 
 func (fo *FetchOptions) setTable(tbl Table) {
 
 	fo.Table = tbl
+}
+
+func (fo *FetchOptions) setUID(uid string) {
+
+	fo.UID = uid
+}
+
+func (fo *FetchOptions) setParents(parents ...Table) {
+
+	fo.Parents = parents
 }
 
 func (fo *FetchOptions) setColumn(param url.Values, meta TableMeta) {
@@ -286,9 +298,4 @@ func (fo *FetchOptions) setDig(param url.Values) {
 	if dig, ok := param["dig"]; ok && (dig[0] == "1") {
 		fo.Dig = 1
 	}
-}
-
-func (fo *FetchOptions) setUID(uid string) {
-
-	fo.UID = uid
 }

@@ -29,7 +29,7 @@ func Fetch(fo *FetchOptions) (FetchResultSetMeta, []interface{}, error) {
 	)
 
 	// set where scope
-	for k, v := range fo.Table.Scope(fo.UID) {
+	for k, v := range fo.Table.Scope(fo.UID, fo.Parents...) {
 		sb.Where(sb.Equal(k, v))
 	}
 
