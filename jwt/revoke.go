@@ -7,7 +7,7 @@ import (
 )
 
 // Keeps a registry of users with a JWT revoke alert.
-var revokedJWTMap map[string]map[int64]int64
+var revokedJWTMap map[string]map[string]time.Time
 
 // Initializes and cleans up the revokedJWTMap registry.
 // revokedJWTMap keys represent the users and the values
@@ -23,7 +23,7 @@ var revokedJWTMap map[string]map[int64]int64
 // JWT lifetime is set in the configuration files.
 func Init() {
 
-	revokedJWTMap = map[string]map[int64]int64{}
+	revokedJWTMap = map[string]map[string]time.Time{}
 
 	go func() {
 		mcl := time.Duration(60) * time.Second
@@ -31,7 +31,7 @@ func Init() {
 		for {
 			for k1, v1 := range revokedJWTMap {
 				for k2, v2 := range v1 {
-					if v2 < time.Now().Add(-1*jwtDuration).Unix() {
+					if v2.Before(time.Now().Add(-1 * jwtDuration)) {
 						delete(revokedJWTMap[k1], k2)
 					}
 				}
@@ -42,28 +42,28 @@ func Init() {
 }
 
 //RevokeJWT exported
-func RevokeJWT(src string, id int64) {
+func RevokeJWT(t string, uid string) {
 
-	if _, ok := revokedJWTMap[src]; !ok {
-		revokedJWTMap[src] = map[int64]int64{}
+	if _, ok := revokedJWTMap[t]; !ok {
+		revokedJWTMap[t] = map[string]time.Time{}
 	}
 
-	revokedJWTMap[src][id] = time.Now().Unix()
+	revokedJWTMap[t][uid] = time.Now()
 }
 
 // RevokedJWTReset exported
 func RevokedJWTReset() {
 
-	revokedJWTMap = map[string]map[int64]int64{}
+	revokedJWTMap = map[string]map[string]time.Time{}
 }
 
 // IsRevoked exported
 func IsRevoked(payload Payload) bool {
 
-	ts, revoked := revokedJWTMap[payload.Src][payload.Id]
+	ts, revoked := revokedJWTMap[payload.Type][payload.UID]
 
 	if revoked {
-		return payload.Iat < ts
+		return ts.After(payload.Iat)
 	}
 	return false
 }

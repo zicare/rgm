@@ -42,7 +42,7 @@ type TPS struct {
 }
 
 // TPSmap exported
-type TPSmap map[string]map[int64]*TPS
+type TPSmap map[string]map[string]*TPS
 
 // The map.
 // Each acl.User required to authorize a transaction
@@ -82,7 +82,7 @@ func Init() error {
 		//Penalty factor must be between %s and %s
 		return msg.Get("31").SetArgs("0", "10").M2E()
 	} else {
-		tpsmap = map[string]map[int64]*TPS{}
+		tpsmap = map[string]map[string]*TPS{}
 		cleanUp()
 		return nil
 	}
@@ -94,28 +94,28 @@ func Init() error {
 // shouldn't be granted access before said datetime.
 // Even if a user is blocked, new request should also be
 // accounted for here, a more distant datetime could be returned.
-func Transaction(src string, id int64, tpsMax float32) *time.Time {
+func Transaction(t string, uid string, tpsMax float32) *time.Time {
 
 	now := time.Now()
 
-	if _, ok := tpsmap[src]; !ok {
-		tpsmap[src] = map[int64]*TPS{}
+	if _, ok := tpsmap[t]; !ok {
+		tpsmap[t] = map[string]*TPS{}
 	}
 
-	if _, ok := tpsmap[src][id]; !ok {
+	if _, ok := tpsmap[t][uid]; !ok {
 		tps := new(TPS)
 		tps.ch = make(chan time.Time, chcap)
-		tpsmap[src][id] = tps
+		tpsmap[t][uid] = tps
 	}
 
-	if len(tpsmap[src][id].ch) == cap(tpsmap[src][id].ch) {
-		tpsmap[src][id].setOp(<-tpsmap[src][id].ch, now, tpsMax)
+	if len(tpsmap[t][uid].ch) == cap(tpsmap[t][uid].ch) {
+		tpsmap[t][uid].setOp(<-tpsmap[t][uid].ch, now, tpsMax)
 	}
 
-	tpsmap[src][id].ch <- now
-	tpsmap[src][id].ts = now
+	tpsmap[t][uid].ch <- now
+	tpsmap[t][uid].ts = now
 
-	return tpsmap[src][id].op
+	return tpsmap[t][uid].op
 }
 
 // Return actual current tps and

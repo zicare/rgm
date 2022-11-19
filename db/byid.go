@@ -1,19 +1,19 @@
 package db
 
 import (
-	"database/sql"
+	"encoding/json"
 
-	"github.com/huandu/go-sqlbuilder"
 	"github.com/zicare/rgm/msg"
 )
 
-// ByID exported
+// Find record by primary key.
+// In case of composite primary keys, id params must be entered in the same order
+// as pk tags are declared in the Table, top to bottom.
 func ByID(t Table, id ...string) error {
 
 	var (
+		w  = make(Params)
 		pk = Pk(t)
-		ms = sqlbuilder.NewStruct(t).For(sqlbuilder.MySQL)
-		sb = ms.SelectFrom(t.Name())
 	)
 
 	if len(pk) != len(id) {
@@ -21,17 +21,18 @@ func ByID(t Table, id ...string) error {
 		return &e
 	}
 
-	for i, j := range pk {
-		sb.Where(sb.Equal(j, id[i]))
+	for k, v := range pk {
+		w[v] = id[k]
 	}
 
-	q, args := sb.Build()
-	if err := Db().QueryRow(q, args...).Scan(ms.Addr(&t)...); err == sql.ErrNoRows {
-		e := NotFoundError{Message: msg.Get("18")} // Not found!
-		return &e
-	} else if err != nil {
-		// Server error: %s
-		return msg.Get("25").SetArgs(err.Error()).M2E()
+	if fo, err := FindOptionsFactory(t, "", nil, w, true); err != nil {
+		return err
+	} else if _, data, err := Find(fo); err != nil {
+		return err
+	} else {
+		data, _ := json.Marshal(data)
+		json.Unmarshal(data, &t)
 	}
+
 	return nil
 }

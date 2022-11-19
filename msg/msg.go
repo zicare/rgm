@@ -53,7 +53,7 @@ func _init() {
 	msg["7"] = New("7", "JWT authorization header malformed")
 	msg["8"] = New("8", "Not enough permissions")
 	msg["9"] = New("9", "Role access expired or not yet valid")
-	msg["10"] = New("10", "TPS limit exceeded")
+	msg["10"] = New("10", "TPS limit exceeded, access void until %s")
 	msg["11"] = New("11", "Unauthorized")
 	msg["12"] = New("12", "Invalid token")
 	msg["13"] = New("13", "Invalid payload")
@@ -75,4 +75,5 @@ func _init() {
 	//msg["29"] = New("29", "CORS tags are not properly set")
 	//msg["30"] = New("30", "Auth tags no set")
 	msg["31"] = New("31", "TPS penalty factor must be between %s and %s")
+	msg["32"] = New("32", "Token revoked")
 }

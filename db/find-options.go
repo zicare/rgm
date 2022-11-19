@@ -1,8 +1,6 @@
 package db
 
 import (
-	"net/url"
-
 	"github.com/zicare/rgm/msg"
 )
 
@@ -11,30 +9,25 @@ type FindOptions struct {
 	Table    Table
 	UID      string
 	Parents  []Table // Also used to set scope in find, fetch, etc.
-	Where    map[string]string
+	Where    Params
 	Checksum int
 	Dig      int
 }
 
-// FindOptionsFactory exported
-func FindOptionsFactory(tbl Table, uid string, qparam url.Values, uparam map[string]string, parents ...Table) (*FindOptions, *ParamError) {
+// FindByOptionsFactory exported
+func FindOptionsFactory(tbl Table, uid string, qparams QParams, params Params, pk bool, parents ...Table) (*FindOptions, *ParamError) {
 
-	var (
-		fo = new(FindOptions)
-		pk = Pk(tbl)
-	)
-
-	if err := fo.setWhere(pk, uparam); err != nil {
-		return fo, err
-	}
+	fo := new(FindOptions)
 
 	fo.setTable(tbl)
 	fo.setUID(uid)
 	fo.setParents(parents...)
-	fo.setChecksum(qparam)
-	fo.setDig(qparam)
+	fo.setChecksum(qparams)
+	fo.setDig(qparams)
 
-	return fo, nil
+	err := fo.setWhere(params, pk)
+
+	return fo, err
 }
 
 func (fo *FindOptions) setTable(tbl Table) {
@@ -52,14 +45,22 @@ func (fo *FindOptions) setParents(parents ...Table) {
 	fo.Parents = parents
 }
 
-func (fo *FindOptions) setWhere(pk []string, uparam map[string]string) *ParamError {
+func (fo *FindOptions) setWhere(params Params, pk bool) *ParamError {
 
-	fo.Where = make(map[string]string)
+	var cols []string
 
-	for _, k := range pk {
-		if _, ok := uparam[k]; ok {
-			fo.Where[k] = uparam[k]
-		} else {
+	if pk {
+		cols = Pk(fo.Table)
+	} else {
+		cols = Cols(fo.Table)
+	}
+
+	fo.Where = make(Params)
+
+	for _, k := range cols {
+		if v, ok := params[k]; ok {
+			fo.Where[k] = v
+		} else if pk {
 			e := ParamError{msg.Get("26")}
 			return &e
 		}
@@ -68,16 +69,16 @@ func (fo *FindOptions) setWhere(pk []string, uparam map[string]string) *ParamErr
 	return nil
 }
 
-func (fo *FindOptions) setChecksum(qparam url.Values) {
+func (fo *FindOptions) setChecksum(qparams QParams) {
 
-	if checksum, ok := qparam["checksum"]; ok && (checksum[0] == "1") {
+	if checksum, ok := qparams["checksum"]; ok && (checksum[0] == "1") {
 		fo.Checksum = 1
 	}
 }
 
-func (fo *FindOptions) setDig(qparam url.Values) {
+func (fo *FindOptions) setDig(qparams QParams) {
 
-	if dig, ok := qparam["dig"]; ok && (dig[0] == "1") {
+	if dig, ok := qparams["dig"]; ok && (dig[0] == "1") {
 		fo.Dig = 1
 	}
 }

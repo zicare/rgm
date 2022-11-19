@@ -1,12 +1,5 @@
 package lib
 
-import "time"
-
-//TimeRange exported
-type TimeRange struct {
-	From, To time.Time
-}
-
 //Pair exported
 type Pair struct {
 	A, B interface{}

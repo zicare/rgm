@@ -1,11 +1,10 @@
 package ctrl
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zicare/rgm/acl"
+	"github.com/zicare/rgm/auth"
 	"github.com/zicare/rgm/db"
 	"github.com/zicare/rgm/msg"
 )
@@ -13,65 +12,16 @@ import (
 // BaseController exported
 type BaseController struct{}
 
-// Find exported
-func (bc BaseController) Find(c *gin.Context, tbl db.Table) {
-
-	if fo, e := bc.getFindOptions(c, tbl); e != nil {
-		// ParamError, most probably a composite pk malformed
-		c.JSON(
-			http.StatusBadRequest,
-			gin.H{"message": e},
-		)
-	} else if meta, data, err := db.Find(fo); err != nil {
-		switch e := err.(type) {
-		case *db.NotFoundError:
-			c.JSON(
-				http.StatusNotFound,
-				gin.H{"message": e},
-			)
-		default:
-			c.JSON(
-				http.StatusInternalServerError,
-				gin.H{"message": e},
-			)
-		}
-	} else {
-		c.Header("X-Checksum", meta.Checksum)
-		c.JSON(http.StatusOK, data)
-	}
-}
-
-// Fetch exported
-func (bc BaseController) Fetch(c *gin.Context, tbl db.Table) {
-
-	fo := bc.getFetchOptions(c, tbl)
-	if meta, data, err := db.Fetch(fo); err != nil {
-		c.JSON(
-			http.StatusInternalServerError,
-			gin.H{"message": err},
-		)
-	} else if len(data) <= 0 {
-		c.JSON(
-			http.StatusNotFound,
-			gin.H{"message": msg.Get("18")}, //Not found!
-		)
-	} else {
-		c.Header("X-Range", meta.Range)
-		c.Header("X-Checksum", meta.Checksum)
-		c.JSON(http.StatusOK, data)
-	}
-}
-
 // Hierarchical Find.
 // Supports endpoints with nested resources in path.
 // If a parent resource is not found, the find is aborted with a NotFoundError.
 // Child resources can implement custom logic in the Scope method
 // to determine, whether o not, to abort find based on the parent
 // resources, which are also made available within Scope method
-// by HFind.
-func (bc BaseController) HFind(c *gin.Context, t db.Table, p ...db.Table) {
+// by Find.
+func (bc BaseController) Find(c *gin.Context, t db.Table, p ...db.Table) {
 
-	if fos, e := bc.getHFindOptions(c, t, p...); e != nil {
+	if fos, e := bc.getFindOptions(c, t, p...); e != nil {
 		c.JSON(
 			http.StatusBadRequest,
 			gin.H{"message": e},
@@ -106,10 +56,10 @@ func (bc BaseController) HFind(c *gin.Context, t db.Table, p ...db.Table) {
 // Child resources can implement custom logic in the Scope method
 // to determine, whether o not, to abort fetch based on the parent
 // resources, which are also made available within Scope method
-// by HFetch.
-func (bc BaseController) HFetch(c *gin.Context, t db.Table, p ...db.Table) {
+// by Fetch.
+func (bc BaseController) Fetch(c *gin.Context, t db.Table, p ...db.Table) {
 
-	if feo, fios, e := bc.getHFetchOptions(c, t, p...); e != nil {
+	if feo, fios, e := bc.getFetchOptions(c, t, p...); e != nil {
 		c.JSON(
 			http.StatusBadRequest,
 			gin.H{"message": e},
@@ -150,53 +100,32 @@ func (bc BaseController) HFetch(c *gin.Context, t db.Table, p ...db.Table) {
 	}
 }
 
-func (bc BaseController) getFindOptions(c *gin.Context, tbl db.Table) (*db.FindOptions, *db.ParamError) {
-
-	var (
-		uid    = fmt.Sprint(acl.UserID(c))
-		qparam = c.Request.URL.Query()
-		uparam = make(map[string]string)
-	)
-
-	for _, up := range c.Params {
-		uparam[up.Key] = up.Value
-	}
-
-	return db.FindOptionsFactory(tbl, uid, qparam, uparam)
-}
-
-func (bc BaseController) getFetchOptions(c *gin.Context, tbl db.Table) *db.FetchOptions {
-
-	var (
-		uid    = fmt.Sprint(acl.UserID(c))
-		qparam = c.Request.URL.Query()
-	)
-
-	return db.FetchOptionsFactory(tbl, uid, qparam)
-}
-
-func (bc BaseController) getHFindOptions(c *gin.Context, t db.Table, p ...db.Table) ([]*db.FindOptions, *db.ParamError) {
+func (bc BaseController) getFindOptions(c *gin.Context, t db.Table, p ...db.Table) ([]*db.FindOptions, *db.ParamError) {
 
 	var (
 		fos    = []*db.FindOptions{}
-		uid    = fmt.Sprint(acl.UserID(c))
-		qparam = c.Request.URL.Query()
-		uparam = make(map[string]string)
+		uid    = auth.UID(c)
+		qparam = make(db.QParams)
+		param  = make(db.Params)
 	)
 
+	for k, v := range c.Request.URL.Query() {
+		qparam[k] = v
+	}
+
 	for _, up := range c.Params {
-		uparam[up.Key] = up.Value
+		param[up.Key] = up.Value
 	}
 
 	for _, j := range p {
-		if fo, e := db.FindOptionsFactory(j, uid, nil, uparam); e != nil {
+		if fo, e := db.FindOptionsFactory(j, uid, nil, param, true); e != nil {
 			return nil, e
 		} else {
 			fos = append(fos, fo)
 		}
 	}
 
-	if fo, e := db.FindOptionsFactory(t, uid, qparam, uparam); e != nil {
+	if fo, e := db.FindOptionsFactory(t, uid, qparam, param, true); e != nil {
 		return nil, e
 	} else {
 		fos = append(fos, fo)
@@ -214,22 +143,27 @@ func (bc BaseController) getHFindOptions(c *gin.Context, t db.Table, p ...db.Tab
 	return fos, nil
 }
 
-func (bc BaseController) getHFetchOptions(c *gin.Context, t db.Table, p ...db.Table) (*db.FetchOptions, []*db.FindOptions, *db.ParamError) {
+func (bc BaseController) getFetchOptions(c *gin.Context, t db.Table, p ...db.Table) (*db.FetchOptions, []*db.FindOptions, *db.ParamError) {
 
 	var (
-		uid    = fmt.Sprint(acl.UserID(c))
-		qparam = c.Request.URL.Query()
-		feo    = db.FetchOptionsFactory(t, uid, qparam)
-		fios   = []*db.FindOptions{}
-		uparam = make(map[string]string)
+		qparam = make(db.QParams)
+		param  = make(db.Params)
+		uid    = auth.UID(c)
 	)
 
-	for _, up := range c.Params {
-		uparam[up.Key] = up.Value
+	for k, v := range c.Request.URL.Query() {
+		qparam[k] = v
 	}
 
+	for _, up := range c.Params {
+		param[up.Key] = up.Value
+	}
+
+	feo := db.FetchOptionsFactory(t, uid, qparam)
+	fios := []*db.FindOptions{}
+
 	for _, j := range p {
-		if fio, e := db.FindOptionsFactory(j, uid, nil, uparam); e != nil {
+		if fio, e := db.FindOptionsFactory(j, uid, nil, param, true); e != nil {
 			return nil, nil, e
 		} else {
 			fios = append(fios, fio)

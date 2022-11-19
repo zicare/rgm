@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/zicare/rgm/config"
 	"github.com/zicare/rgm/lib"
 	"github.com/zicare/rgm/msg"
 )
@@ -95,7 +96,9 @@ func Fetch(fo *FetchOptions) (FetchResultSetMeta, []interface{}, error) {
 	sb.OrderBy(fo.Order...)
 
 	// set limit
-	sb.Limit(fo.Limit)
+	if fo.Limit > 0 {
+		sb.Limit(lib.Min(fo.Limit, config.Config().GetInt("param.icpp_max")))
+	}
 
 	// set offset
 	sb.Offset(fo.Offset)

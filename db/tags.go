@@ -86,12 +86,24 @@ func Pk(tbl Table) (f []string) {
 	t := reflect.ValueOf(tbl).Elem()
 
 	for i := 0; i < t.NumField(); i++ {
-		if tag, ok := t.Type().Field(i).Tag.Lookup("pk"); ok {
-			if col, ok := t.Type().Field(i).Tag.Lookup("db"); ok {
-				if tag == "1" {
-					f = append(f, col)
-				}
+		if pk, ok := t.Type().Field(i).Tag.Lookup("pk"); ok && pk == "1" {
+			if db, ok := t.Type().Field(i).Tag.Lookup("db"); ok && db != "-" {
+				f = append(f, db)
 			}
+		}
+	}
+
+	return f
+}
+
+// Returns a slice of db fields tagged as `pk:"1"`
+func Cols(tbl Table) (f []string) {
+
+	t := reflect.ValueOf(tbl).Elem()
+
+	for i := 0; i < t.NumField(); i++ {
+		if db, ok := t.Type().Field(i).Tag.Lookup("db"); ok && db != "-" {
+			f = append(f, db)
 		}
 	}
 

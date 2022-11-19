@@ -5,118 +5,122 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zicare/rgm/config"
 	"github.com/zicare/rgm/lib"
 	"github.com/zicare/rgm/msg"
 )
 
-//User exported
-type User struct {
-	Src  string
-	Id   int64
-	Role int64
-	TPS  float32
-	Usr  string
-	Pwd  string
-	From time.Time
-	To   time.Time
+type JWT struct {
+	header  Header
+	payload Payload
+	token   string
 }
 
-//Payload exported
+type Header struct {
+	Typ string `json:"typ"`
+	Alg string `json:"alg"`
+}
+
 type Payload struct {
-	Exp  int64   `json:"exp"`
-	Iat  int64   `json:"iat"`
-	Id   int64   `json:"id"`
-	Role int64   `json:"role"`
-	Src  string  `json:"src"`
-	TPS  float32 `json:"tps"`
+	UID  string    `json:"uid"`
+	Type string    `json:"type"`
+	Role string    `json:"role"`
+	TPS  float32   `json:"tps"`
+	Iat  time.Time `json:"iat"`
+	Exp  time.Time `json:"exp"`
 }
 
-//Token exported
-func Token(u User, duration time.Duration, secret string) (string, string) {
+// Returns token and exp for an auth.User
+func JWTFactory(uid string, role string, t string, tps float32, iat time.Time, exp time.Time) JWT {
 
-	now := time.Now()
-	j := new(Payload{
-		Exp:  now.Add(duration).Unix(),
-		Iat:  now.Unix(),
-		Id:   u.Id,
-		Role: u.Role,
-		Src:  u.Src,
-		TPS:  u.TPS,
-	}, secret)
+	var (
+		now         = time.Now()
+		duration, _ = time.ParseDuration(config.Config().GetString("jwt_duration"))
+	)
 
-	return j.token, j.exp
+	// Cap exp
+	if exp.After(now.Add(duration)) {
+		exp = now.Add(duration)
+	}
+
+	// Cap iat
+	if iat.Before(now) {
+		iat = now
+	}
+
+	return new(Payload{
+		UID:  uid,
+		Type: t,
+		Role: role,
+		TPS:  tps,
+		Iat:  iat,
+		Exp:  exp,
+	})
 
 }
 
-//Decode exported
-func Decode(token string, secret string) (Payload, *msg.Message) {
+func (j JWT) ToString() string {
+
+	return j.token
+}
+
+// Decode exported
+func Decode(token string) (Payload, error) {
 
 	var payload Payload
 
 	t := strings.Split(token, ".")
 	if len(t) != 3 {
 		//Invalid token
-		return payload, msg.Get("12").M2E()
+		e := InvalidToken{Message: msg.Get("12")}
+		return payload, &e
 	}
 
-	decodedPayload, PayloadErr := lib.Decode(t[1])
-	if PayloadErr != nil {
+	decodedPayload, err := lib.B64Decode(t[1])
+	if err != nil {
 		//Invalid payload
-		return payload, msg.Get("13").M2E()
+		e := InvalidTokenPayload{Message: msg.Get("13")}
+		return payload, &e
 	}
 
 	ParseErr := json.Unmarshal([]byte(decodedPayload), &payload)
 	if ParseErr != nil {
-		//Invalid payload
-		return payload, msg.Get("13").M2E()
+		//Token tampered
+		e := InvalidTokenPayload{Message: msg.Get("14")}
+		return payload, &e
 	}
 
-	j := new(payload, secret)
+	j := new(payload)
 
 	if token != j.token {
 		//Token tampered
-		return payload, msg.Get("14").M2E()
+		e := TamperedToken{Message: msg.Get("14")}
+		return payload, &e
 	}
 
-	if j.payload.Exp < time.Now().Unix() {
+	if time.Now().After(j.payload.Exp) {
 		//Token expired
-		return payload, msg.Get("15").M2E()
+		e := ExpiredToken{Message: msg.Get("15")}
+		return payload, &e
 	}
 
 	return payload, nil
 
 }
 
-type jwt struct {
-	header  header
-	payload Payload
-	token   string
-	exp     string
-}
-
-type header struct {
-	Typ string `json:"typ"`
-	Alg string `json:"alg"`
-}
-
-func new(payload Payload, secret string) jwt {
-
-	j := jwt{}
-	j.header = header{
-		Typ: "JWT",
-		Alg: "HS256",
-	}
-	j.payload = payload
-	j.token = j.getToken(secret)
-	j.exp = time.Unix(j.payload.Exp, 0).Format(time.RFC3339)
-	return j
-}
-
-func (j jwt) getToken(secret string) string {
+func new(payload Payload) JWT {
 
 	var (
-		src       = lib.Encode(j.header) + "." + lib.Encode(j.payload)
+		secret    = config.Config().GetString("hmac_key")
+		header    = Header{Typ: "JWT", Alg: "HS256"}
+		src       = lib.B64Encode(header) + "." + lib.B64Encode(payload)
 		signature = lib.Hash(src, secret)
+		token     = src + "." + signature
 	)
-	return src + "." + signature
+
+	return JWT{
+		header:  header,
+		payload: payload,
+		token:   token,
+	}
 }

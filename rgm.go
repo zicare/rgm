@@ -5,14 +5,44 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/zicare/rgm/acl"
+	"github.com/gin-gonic/gin"
+	"github.com/zicare/rgm/auth"
 	"github.com/zicare/rgm/config"
 	"github.com/zicare/rgm/db"
+	"github.com/zicare/rgm/jwt"
 	"github.com/zicare/rgm/msg"
+	"github.com/zicare/rgm/mw"
 	"github.com/zicare/rgm/tps"
 )
 
-func Init(environment string, grants db.Table, messages []msg.Message) (verbose []string, err error) {
+// Returns a gin.HandlersChain slice loaded
+// with mw.BasicAuthentication, mw.Abuse and h.
+// mw.BasicAuthentication must be passed an auth.UserDS param,
+// BHC relies for this on auth.TUserDS, a default implementation
+// of auth.UserDS that uses t as the user data store.
+// t must be propperly annotated with auth tags,
+// otherwise a 500 http response code will be issued
+// when calling mw.BasicAuthentication.
+func BHC(t db.Table, h gin.HandlerFunc) gin.HandlersChain {
+
+	handlersChain := gin.HandlersChain{}
+	handlersChain = append(handlersChain, mw.BasicAuthentication(auth.TUserDSFactory(t)))
+	handlersChain = append(handlersChain, mw.Abuse())
+	return append(handlersChain, h)
+}
+
+// Returns a gin.HandlersChain slice with
+// mw.JWTAuthentication, mw.Abuse, mw.Authorization and h.
+func JHC(h gin.HandlerFunc) gin.HandlersChain {
+
+	handlersChain := gin.HandlersChain{}
+	handlersChain = append(handlersChain, mw.JWTAuthentication())
+	handlersChain = append(handlersChain, mw.Abuse())
+	handlersChain = append(handlersChain, mw.Authorization())
+	return append(handlersChain, h)
+}
+
+func Init(environment string, acl db.Table, messages []msg.Message) (verbose []string, err error) {
 
 	// Initialize config
 	if dir, err := filepath.Abs(filepath.Dir(os.Args[0])); err != nil {
@@ -36,21 +66,31 @@ func Init(environment string, grants db.Table, messages []msg.Message) (verbose 
 		verbose = append(verbose, "System messages... ok")
 	}
 
-	//initialize db
+	// Initialize db
 	if err = db.Init(); err != nil {
 		return verbose, err
 	} else {
 		verbose = append(verbose, "DB connection... ok")
 	}
 
-	//initialize acl
-	if err = acl.Init(grants); err != nil {
+	// Initialize auth
+	if acl == nil {
+		// Do nothing.
+		// Looks like client app doesn't has acl in database.
+		// Client app can always call auth.Init by itself passing
+		// custom implementation of auth.AclDS
+	} else if aclDS, err := auth.TAclDSFactory(acl); err != nil {
+		return verbose, err
+	} else if err := auth.Init(aclDS); err != nil {
 		return verbose, err
 	} else {
 		verbose = append(verbose, "Access control list... ok")
 	}
 
-	//Initialize tps control
+	// Initialize revokedJWTMap
+	jwt.Init()
+
+	// Initialize tps control
 	if err = tps.Init(); err != nil {
 		return verbose, err
 	} else {

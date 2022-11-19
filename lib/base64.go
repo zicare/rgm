@@ -9,14 +9,14 @@ import (
 )
 
 // Encode exported
-func Encode(s interface{}) string {
+func B64Encode(s interface{}) string {
 
 	b, _ := json.Marshal(s)
 	return strings.TrimRight(base64.StdEncoding.EncodeToString(b), "=")
 }
 
 // Decode exported
-func Decode(src string) (string, error) {
+func B64Decode(src string) (string, error) {
 
 	if l := len(src) % 4; l > 0 {
 		src += strings.Repeat("=", 4-l)
