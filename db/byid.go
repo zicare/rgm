@@ -2,8 +2,6 @@ package db
 
 import (
 	"encoding/json"
-
-	"github.com/zicare/rgm/msg"
 )
 
 // Find record by primary key.
@@ -12,22 +10,21 @@ import (
 func ByID(t Table, id ...string) error {
 
 	var (
-		w  = make(Params)
+		w  = make(UParams)
 		pk = Pk(t)
 	)
 
 	if len(pk) != len(id) {
-		e := ParamError{msg.Get("26")} // Composite key missuse
-		return &e
+		return new(ParamError)
 	}
 
 	for k, v := range pk {
 		w[v] = id[k]
 	}
 
-	if fo, err := FindOptionsFactory(t, "", nil, w, true); err != nil {
-		return err
-	} else if _, data, err := Find(fo); err != nil {
+	if qo := QueryOptionsFactory(t, "", nil, w); !qo.IsPrimary() {
+		return new(ParamError)
+	} else if _, data, err := Find(qo); err != nil {
 		return err
 	} else {
 		data, _ := json.Marshal(data)

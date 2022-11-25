@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/huandu/go-sqlbuilder"
-	"github.com/zicare/rgm/msg"
 )
 
 // FindResultSetMeta exported
@@ -16,46 +15,50 @@ type FindResultSetMeta struct {
 }
 
 // Find exported
-func Find(fo *FindOptions) (FindResultSetMeta, interface{}, error) {
+func Find(qo *QueryOptions) (FindResultSetMeta, interface{}, error) {
 
 	var (
 		meta = FindResultSetMeta{Checksum: "*"}
-		ms   = sqlbuilder.NewStruct(fo.Table).For(sqlbuilder.MySQL)
-		sb   = ms.SelectFrom(fo.Table.Name())
+		ms   = sqlbuilder.NewStruct(qo.Table).For(sqlbuilder.MySQL)
+		sb   = ms.SelectFrom(qo.Table.Name())
 	)
 
 	// set where scope
-	for k, v := range fo.Table.Scope(fo.UID, fo.Parents...) {
+	for k, v := range qo.Table.Scope(qo.UID, qo.Parents...) {
 		sb.Where(sb.Equal(k, v))
 	}
 
 	// set where Equal
-	for k, v := range fo.Where {
-		sb.Where(sb.Equal(k, v))
+	if qo.IsPrimary() {
+		for k, v := range qo.Equal[Primary] {
+			sb.Where(sb.Equal(k, v))
+		}
+	} else {
+		for k, v := range qo.Equal[Url] {
+			sb.Where(sb.Equal(k, v))
+		}
 	}
 
 	// build the sql
 	q, args := sb.Build()
 
 	// execute query
-	if err := Db().QueryRow(q, args...).Scan(ms.Addr(&fo.Table)...); err == sql.ErrNoRows {
-		e := NotFoundError{Message: msg.Get("18")} //Not found!
-		return meta, fo.Table, &e
+	if err := Db().QueryRow(q, args...).Scan(ms.Addr(&qo.Table)...); err == sql.ErrNoRows {
+		return meta, qo.Table, new(NotFoundError)
 	} else if err != nil {
-		//Server error: %s
-		return meta, fo.Table, msg.Get("25").SetArgs(err.Error()).M2E()
+		return meta, qo.Table, err
 	}
 
-	if fo.Dig == 1 {
-		fo.Table.Dig()
+	if qo.Dig == 1 {
+		qo.Table.Dig()
 	}
 
 	// Response headers meta
-	if fo.Checksum == 1 {
-		bytes, _ := json.Marshal(fo.Table)
+	if qo.Checksum == 1 {
+		bytes, _ := json.Marshal(qo.Table)
 		checksum := crc32.ChecksumIEEE([]byte(bytes))
 		meta.Checksum = strconv.FormatUint(uint64(checksum), 16)
 	}
 
-	return meta, fo.Table, nil
+	return meta, qo.Table, nil
 }

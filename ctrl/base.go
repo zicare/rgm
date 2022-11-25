@@ -12,37 +12,37 @@ import (
 // BaseController exported
 type BaseController struct{}
 
-// Hierarchical Find.
 // Supports endpoints with nested resources in path.
-// If a parent resource is not found, the find is aborted with a NotFoundError.
+// If a parent resource is not found, Find is aborted with a NotFoundError.
 // Child resources can implement custom logic in the Scope method
-// to determine, whether o not, to abort find based on the parent
-// resources, which are also made available within Scope method
+// to impose addtional constraints based on the requesting user UID
+// and parent resources, both of which are made available within Scope method
 // by Find.
 func (bc BaseController) Find(c *gin.Context, t db.Table, p ...db.Table) {
 
-	if fos, e := bc.getFindOptions(c, t, p...); e != nil {
+	if qo, pqos, e := bc.getQueryOptions(c, true, t, p...); e != nil {
 		c.JSON(
 			http.StatusBadRequest,
-			gin.H{"message": e},
+			gin.H{"message": msg.Get("26")},
 		)
 	} else {
-		for i, fo := range fos {
-			if meta, data, err := db.Find(fo); err != nil {
+		pqos = append(pqos, qo)
+		for i, qo := range pqos {
+			if meta, data, err := db.Find(qo); err != nil {
 				switch err.(type) {
 				case *db.NotFoundError:
 					c.JSON(
 						http.StatusNotFound,
-						gin.H{"message": err},
+						gin.H{"message": msg.Get("18")},
 					)
 				default:
 					c.JSON(
 						http.StatusInternalServerError,
-						gin.H{"message": err},
+						gin.H{"message": msg.Get("25").SetArgs(err.Error())},
 					)
 				}
 				return
-			} else if i == len(fos)-1 {
+			} else if i == len(pqos)-1 {
 				c.Header("X-Checksum", meta.Checksum)
 				c.JSON(http.StatusOK, data)
 			}
@@ -50,47 +50,41 @@ func (bc BaseController) Find(c *gin.Context, t db.Table, p ...db.Table) {
 	}
 }
 
-// Hierarchical Fetch.
 // Supports endpoints with nested resources in path.
-// If a parent resource is not found, the fetch is aborted with a NotFoundError.
+// If a parent resource is not found, the Fetch is aborted with a NotFoundError.
 // Child resources can implement custom logic in the Scope method
-// to determine, whether o not, to abort fetch based on the parent
-// resources, which are also made available within Scope method
+// to impose addtional constraints based on the requesting user UID
+// and parent resources, both of which are made available within Scope method
 // by Fetch.
 func (bc BaseController) Fetch(c *gin.Context, t db.Table, p ...db.Table) {
 
-	if feo, fios, e := bc.getFetchOptions(c, t, p...); e != nil {
+	if qo, pqos, e := bc.getQueryOptions(c, false, t, p...); e != nil {
 		c.JSON(
 			http.StatusBadRequest,
-			gin.H{"message": e},
+			gin.H{"message": msg.Get("26")},
 		)
 	} else {
-		for _, fio := range fios {
-			if _, _, err := db.Find(fio); err != nil {
+		for _, pqo := range pqos {
+			if _, _, err := db.Find(pqo); err != nil {
 				switch err.(type) {
 				case *db.NotFoundError:
 					c.JSON(
 						http.StatusNotFound,
-						gin.H{"message": err},
+						gin.H{"message": msg.Get("18")},
 					)
 				default:
 					c.JSON(
 						http.StatusInternalServerError,
-						gin.H{"message": err},
+						gin.H{"message": msg.Get("25").SetArgs(err.Error())},
 					)
 				}
 				return
 			}
 		}
-		if meta, data, err := db.Fetch(feo); err != nil {
+		if meta, data, err := db.Fetch(qo); err != nil {
 			c.JSON(
 				http.StatusInternalServerError,
-				gin.H{"message4": err},
-			)
-		} else if len(data) <= 0 {
-			c.JSON(
-				http.StatusNotFound,
-				gin.H{"message5": msg.Get("18")}, //Not found!
+				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
 			)
 		} else {
 			c.Header("X-Range", meta.Range)
@@ -100,85 +94,110 @@ func (bc BaseController) Fetch(c *gin.Context, t db.Table, p ...db.Table) {
 	}
 }
 
-func (bc BaseController) getFindOptions(c *gin.Context, t db.Table, p ...db.Table) ([]*db.FindOptions, *db.ParamError) {
+// Supports single and multiple deletes.
+// Supports endpoints with nested resources in path.
+// If a parent resource is not found, Delete is aborted with a NotFoundError.
+// Child resources can implement custom logic in the Scope method
+// to determine, whether o not, to abort Delete based on the parent
+// resources finding result.
+// Child resources can also implement custom logic in the BeforeDelete method
+// to impose addtional constraints based on the requesting user UID
+// and parent resources, both of which are made available within BeforeDelete method
+// by Delete. BeforeDelete can also return a flag to abort Delete altogether.
+func (bc BaseController) Delete(c *gin.Context, t db.Table, p ...db.Table) {
 
-	var (
-		fos    = []*db.FindOptions{}
-		uid    = auth.UID(c)
-		qparam = make(db.QParams)
-		param  = make(db.Params)
-	)
+	qo, pqos, e := bc.getQueryOptions(c, false, t, p...)
 
-	for k, v := range c.Request.URL.Query() {
-		qparam[k] = v
+	if e != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{"message": msg.Get("26")},
+		)
+		return
 	}
 
-	for _, up := range c.Params {
-		param[up.Key] = up.Value
-	}
-
-	for _, j := range p {
-		if fo, e := db.FindOptionsFactory(j, uid, nil, param, true); e != nil {
-			return nil, e
-		} else {
-			fos = append(fos, fo)
-		}
-	}
-
-	if fo, e := db.FindOptionsFactory(t, uid, qparam, param, true); e != nil {
-		return nil, e
-	} else {
-		fos = append(fos, fo)
-	}
-
-	// append parents
-	for i, fo1 := range fos {
-		for j, fo2 := range fos {
-			if j > i {
-				fo2.Parents = append(fo2.Parents, fo1.Table)
+	// Verify parent resources exist and are within read scope
+	for _, pqo := range pqos {
+		if _, _, err := db.Find(pqo); err != nil {
+			switch err.(type) {
+			case *db.NotFoundError:
+				c.JSON(
+					http.StatusNotFound,
+					gin.H{"message": msg.Get("18")},
+				)
+			default:
+				c.JSON(
+					http.StatusInternalServerError,
+					gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+				)
 			}
+			return
 		}
 	}
 
-	return fos, nil
+	// Proceed with delete.
+	if r, err := db.Delete(qo); err != nil {
+		switch err.(type) {
+		case *db.NotAllowedError:
+			c.JSON(
+				http.StatusUnauthorized,
+				gin.H{"message": msg.Get("11")},
+			)
+		default:
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+			)
+		}
+	} else {
+		c.JSON(
+			http.StatusOK,
+			gin.H{"message": msg.Get("29").SetArgs(r)},
+		)
+	}
+
 }
 
-func (bc BaseController) getFetchOptions(c *gin.Context, t db.Table, p ...db.Table) (*db.FetchOptions, []*db.FindOptions, *db.ParamError) {
+func (bc BaseController) getQueryOptions(c *gin.Context, pk bool, t db.Table,
+	p ...db.Table) (qo *db.QueryOptions, pqos []*db.QueryOptions, e *db.ParamError) {
 
 	var (
-		qparam = make(db.QParams)
-		param  = make(db.Params)
-		uid    = auth.UID(c)
+		uid  = auth.UID(c)
+		qpar = make(db.QParams)
+		upar = make(db.UParams)
 	)
 
 	for k, v := range c.Request.URL.Query() {
-		qparam[k] = v
+		qpar[k] = v
 	}
 
 	for _, up := range c.Params {
-		param[up.Key] = up.Value
+		upar[up.Key] = up.Value
 	}
 
-	feo := db.FetchOptionsFactory(t, uid, qparam)
-	fios := []*db.FindOptions{}
+	// No need to pass parents here, we will append them down below
+	qo = db.QueryOptionsFactory(t, uid, qpar, upar)
+	if pk && !qo.IsPrimary() {
+		return nil, nil, new(db.ParamError)
+	}
 
 	for _, j := range p {
-		if fio, e := db.FindOptionsFactory(j, uid, nil, param, true); e != nil {
-			return nil, nil, e
+		if pqo := db.QueryOptionsFactory(j, uid, nil, upar); !pqo.IsPrimary() {
+			return nil, nil, new(db.ParamError)
 		} else {
-			fios = append(fios, fio)
+			pqos = append(pqos, pqo)
 		}
 	}
 
 	// append parents
-	for i, fio1 := range fios {
-		feo.Parents = append(feo.Parents, fio1.Table)
-		for j, fio2 := range fios {
+	for i, pqo1 := range pqos {
+		qo.Parents = append(qo.Parents, pqo1.Table)
+		for j, pqo2 := range pqos {
 			if j > i {
-				fio2.Parents = append(fio2.Parents, fio1.Table)
+				pqo2.Parents = append(pqo2.Parents, pqo1.Table)
 			}
 		}
 	}
 
-	return feo, fios, nil
+	return qo, pqos, nil
 }

@@ -1,6 +1,7 @@
 package mw
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,15 +19,13 @@ func Abuse() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if u, ok := c.Get("User"); !ok {
-			// Not enough permissions
 			c.AbortWithStatusJSON(
-				401,
+				http.StatusUnauthorized,
 				gin.H{"message": msg.Get("8")},
 			)
 		} else if u, ok := u.(auth.User); !ok {
-			// Not enough permissions
 			c.AbortWithStatusJSON(
-				401,
+				http.StatusUnauthorized,
 				gin.H{"message": msg.Get("8")},
 			)
 		} else if tps.IsEnabled() {
@@ -34,12 +33,13 @@ func Abuse() gin.HandlerFunc {
 			if date := tps.Transaction(u.Type, u.UID, u.TPS); date != nil && date.After(time.Now()) {
 				// TPS limit exceeded
 				c.AbortWithStatusJSON(
-					401,
+					http.StatusTooManyRequests,
 					gin.H{"message": msg.Get("10").SetArgs(date)},
 				)
 			}
+		} else {
+			c.Next()
 		}
 
-		c.Next()
 	}
 }

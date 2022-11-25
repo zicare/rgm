@@ -1,10 +1,12 @@
 package mw
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zicare/rgm/auth"
+	"github.com/zicare/rgm/db"
 	"github.com/zicare/rgm/jwt"
 	"github.com/zicare/rgm/msg"
 )
@@ -22,36 +24,41 @@ func BasicAuthentication(ds auth.UserDS) gin.HandlerFunc {
 		// Get usr and pwd from http request headers
 		username, password, ok := c.Request.BasicAuth()
 		if ok == false {
-			// HTTP basic authentication required
 			c.AbortWithStatusJSON(
-				401,
+				http.StatusUnauthorized,
 				gin.H{"message": msg.Get("3")},
 			)
+			return
 		}
 
+		// Validate usr and pwd passed in http request headers
 		if u, e := ds.GetUser(username, password); e != nil {
 			switch e.(type) {
-			case *auth.InvalidCredentials:
+			case *db.NotFoundError, *auth.InvalidCredentials:
 				c.AbortWithStatusJSON(
-					401,
-					gin.H{"message": e},
+					http.StatusUnauthorized,
+					gin.H{"message": msg.Get("4")},
 				)
 			case *auth.ExpiredCredentials:
 				c.AbortWithStatusJSON(
-					401,
-					gin.H{"message": e},
+					http.StatusUnauthorized,
+					gin.H{"message": msg.Get("6")},
+				)
+			case *auth.UserTagsError:
+				c.AbortWithStatusJSON(
+					http.StatusUnauthorized,
+					gin.H{"message": msg.Get("2").SetArgs("User")},
 				)
 			default:
 				c.AbortWithStatusJSON(
-					500,
-					gin.H{"message": e},
+					http.StatusInternalServerError,
+					gin.H{"message": msg.Get("25").SetArgs(e.Error())},
 				)
 			}
 		} else {
 			c.Set("User", u)
 			c.Next()
 		}
-
 	}
 }
 
@@ -69,7 +76,7 @@ func JWTAuthentication() gin.HandlerFunc {
 		if (len(token) != 2) || (token[0] != "JWT") {
 			// JWT authorization header malformed
 			c.AbortWithStatusJSON(
-				401,
+				http.StatusUnauthorized,
 				gin.H{"message": msg.Get("7")},
 			)
 			return
@@ -79,35 +86,33 @@ func JWTAuthentication() gin.HandlerFunc {
 			switch e.(type) {
 			case *jwt.InvalidToken:
 				c.AbortWithStatusJSON(
-					401,
-					gin.H{"message": e},
+					http.StatusUnauthorized,
+					gin.H{"message": msg.Get("12")},
 				)
 			case *jwt.InvalidTokenPayload:
 				c.AbortWithStatusJSON(
-					401,
-					gin.H{"message": e},
+					http.StatusUnauthorized,
+					gin.H{"message": msg.Get("13")},
 				)
 			case *jwt.TamperedToken:
 				c.AbortWithStatusJSON(
-					401,
-					gin.H{"message": e},
+					http.StatusUnauthorized,
+					gin.H{"message": msg.Get("14")},
 				)
 			case *jwt.ExpiredToken:
 				c.AbortWithStatusJSON(
-					401,
-					gin.H{"message": e},
+					http.StatusUnauthorized,
+					gin.H{"message": msg.Get("15")},
 				)
 			default:
-				// Something went wrong
 				c.AbortWithStatusJSON(
-					500,
-					gin.H{"message": e},
+					http.StatusInternalServerError,
+					gin.H{"message": msg.Get("25").SetArgs(e.Error())},
 				)
 			}
 		} else if revoked := jwt.IsRevoked(payload); revoked {
-			//Token revoked
 			c.AbortWithStatusJSON(
-				401,
+				http.StatusUnauthorized,
 				gin.H{"message": msg.Get("32")},
 			)
 		} else {

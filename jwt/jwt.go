@@ -7,7 +7,6 @@ import (
 
 	"github.com/zicare/rgm/config"
 	"github.com/zicare/rgm/lib"
-	"github.com/zicare/rgm/msg"
 )
 
 type JWT struct {
@@ -48,7 +47,7 @@ func JWTFactory(uid string, role string, t string, tps float32, iat time.Time, e
 		iat = now
 	}
 
-	return new(Payload{
+	return jWT(Payload{
 		UID:  uid,
 		Type: t,
 		Role: role,
@@ -56,7 +55,6 @@ func JWTFactory(uid string, role string, t string, tps float32, iat time.Time, e
 		Iat:  iat,
 		Exp:  exp,
 	})
-
 }
 
 func (j JWT) ToString() string {
@@ -71,44 +69,34 @@ func Decode(token string) (Payload, error) {
 
 	t := strings.Split(token, ".")
 	if len(t) != 3 {
-		//Invalid token
-		e := InvalidToken{Message: msg.Get("12")}
-		return payload, &e
+		return payload, new(InvalidToken)
 	}
 
 	decodedPayload, err := lib.B64Decode(t[1])
 	if err != nil {
-		//Invalid payload
-		e := InvalidTokenPayload{Message: msg.Get("13")}
-		return payload, &e
+		return payload, new(InvalidTokenPayload)
 	}
 
 	ParseErr := json.Unmarshal([]byte(decodedPayload), &payload)
 	if ParseErr != nil {
-		//Token tampered
-		e := InvalidTokenPayload{Message: msg.Get("14")}
-		return payload, &e
+		return payload, new(InvalidTokenPayload)
 	}
 
-	j := new(payload)
+	j := jWT(payload)
 
 	if token != j.token {
-		//Token tampered
-		e := TamperedToken{Message: msg.Get("14")}
-		return payload, &e
+		return payload, new(TamperedToken)
 	}
 
 	if time.Now().After(j.payload.Exp) {
-		//Token expired
-		e := ExpiredToken{Message: msg.Get("15")}
-		return payload, &e
+		return payload, new(ExpiredToken)
 	}
 
 	return payload, nil
 
 }
 
-func new(payload Payload) JWT {
+func jWT(payload Payload) JWT {
 
 	var (
 		secret    = config.Config().GetString("hmac_key")

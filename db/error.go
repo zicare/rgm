@@ -4,22 +4,37 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
-//NotFoundError exported
+// OpenConnError exported
+type OpenConnError struct {
+	msg.Message
+}
+
+// PingTestError exported
+type PingTestError struct {
+	msg.Message
+}
+
+// NotFoundError exported
 type NotFoundError struct {
 	msg.Message
 }
 
-//NotAllowedError exported
+// NotAllowedError exported
 type NotAllowedError struct {
 	msg.Message
 }
 
-//ConflictError exported
+// ConflictError exported
 type ConflictError struct {
 	msg.Message
 }
 
-//ParamError exported
+// ParamError exported
 type ParamError struct {
+	msg.Message
+}
+
+// TableTagError exported
+type TableTagError struct {
 	msg.Message
 }

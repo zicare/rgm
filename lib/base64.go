@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"strings"
-
-	"github.com/zicare/rgm/msg"
 )
 
 // Encode exported
@@ -23,8 +21,8 @@ func B64Decode(src string) (string, error) {
 	}
 	decoded, err := base64.URLEncoding.DecodeString(src)
 	if err != nil {
-		//Decoding Error %s
-		return "", msg.Get("17").SetArgs(err.Error()).M2E()
+		e := new(B64DecodeError).SetArgs(err.Error())
+		return "", &e
 	}
 	return string(decoded), nil
 }

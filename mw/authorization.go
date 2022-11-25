@@ -1,6 +1,8 @@
 package mw
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/zicare/rgm/auth"
 	"github.com/zicare/rgm/msg"
@@ -19,7 +21,7 @@ func Authorization() gin.HandlerFunc {
 
 			//Not enough permissions
 			c.AbortWithStatusJSON(
-				401,
+				http.StatusUnauthorized,
 				gin.H{"message": msg.Get("8")},
 			)
 
@@ -27,7 +29,7 @@ func Authorization() gin.HandlerFunc {
 
 			//Not enough permissions
 			c.AbortWithStatusJSON(
-				401,
+				http.StatusUnauthorized,
 				gin.H{"message": msg.Get("8")},
 			)
 
@@ -42,7 +44,7 @@ func Authorization() gin.HandlerFunc {
 			if valid := g.Valid(); !valid {
 				//Not enough permissions
 				c.AbortWithStatusJSON(
-					401,
+					http.StatusUnauthorized,
 					gin.H{"message": msg.Get("8")},
 				)
 			}

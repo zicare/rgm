@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/zicare/rgm/config"
-	"github.com/zicare/rgm/msg"
 
 	//required
 	_ "github.com/go-sql-driver/mysql"
@@ -29,14 +28,12 @@ func Init() error {
 
 	db, err = sql.Open("mysql", conn)
 	if err != nil {
-		//Server error: %s
-		return msg.Get("25").SetArgs(err.Error()).M2E()
+		return new(OpenConnError)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		//Server error: %s
-		return msg.Get("25").SetArgs(err.Error()).M2E()
+		return new(PingTestError)
 	}
 
 	db.SetMaxOpenConns(cf.GetInt("db.max_open_conns"))

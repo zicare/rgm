@@ -2,9 +2,6 @@ package db
 
 import (
 	"reflect"
-	"strings"
-
-	"github.com/zicare/rgm/msg"
 )
 
 // Returns the TableMeta object for tbl param.
@@ -51,7 +48,7 @@ func GetTableMeta(tbl Table) (meta TableMeta) {
 // v ar m User
 // f, _ := TaggedFields(m, "auth", []string{"id","role","usr"})
 // f -> []string{"user_id","role_id","email"}
-func TaggedFields(tbl Table, tagName string, tagValues []string) ([]string, error) {
+func TaggedFields(tbl Table, tagName string, tagValues []string) ([]string, *TableTagError) {
 
 	var (
 		f = make([]string, len(tagValues))
@@ -72,8 +69,7 @@ func TaggedFields(tbl Table, tagName string, tagValues []string) ([]string, erro
 
 	for _, col := range f {
 		if col == "" {
-			//%s tags not properly set
-			return f, msg.Get("2").SetArgs(strings.Title(tagName)).M2E()
+			return f, new(TableTagError)
 		}
 	}
 

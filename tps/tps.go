@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/zicare/rgm/config"
-	"github.com/zicare/rgm/msg"
 )
 
 // TPS exported
@@ -73,14 +72,14 @@ func Init() error {
 	pf = float32(config.Config().GetFloat64("tps.penalty_factor"))
 
 	if (chcap < 3) || (chcap > 10) {
-		//TPS precision must be between %s and %s
-		return msg.Get("20").SetArgs("3", "10").M2E()
+		e := new(PrecisionRange).SetArgs("3", "10")
+		return &e
 	} else if (mclnup < 1) || (mclnup > 10) {
-		//TPS data clean up cycles must be between %s and %s minutes
-		return msg.Get("21").SetArgs("1", "10").M2E()
+		e := new(CleanUpCycleRange).SetArgs("1", "10")
+		return &e
 	} else if (pf < 0) || (pf > 10) {
-		//Penalty factor must be between %s and %s
-		return msg.Get("31").SetArgs("0", "10").M2E()
+		e := new(PenaltyFactorRange).SetArgs("0", "10")
+		return &e
 	} else {
 		tpsmap = map[string]map[string]*TPS{}
 		cleanUp()

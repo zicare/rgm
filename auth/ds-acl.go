@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/zicare/rgm/db"
-	"github.com/zicare/rgm/msg"
 )
 
 // Defines an interface for ACL data access.
@@ -49,9 +48,7 @@ func TAclDSFactory(t db.Table) (TAclDS, *AclTagsError) {
 
 	// Verify acl tags
 	if _, err := db.TaggedFields(t, "json", []string{"role", "route", "method", "from", "to"}); err != nil {
-		// ACL tags are not properly set
-		e := AclTagsError{Message: msg.Get("2").SetArgs("ACL")}
-		return ds, &e
+		return ds, new(AclTagsError)
 	}
 
 	ds.t = t
@@ -61,10 +58,13 @@ func TAclDSFactory(t db.Table) (TAclDS, *AclTagsError) {
 // GetAcl exported
 func (ds TAclDS) GetAcl() (ACL, error) {
 
-	acl := make(ACL)
+	var (
+		acl = make(ACL)
+		qo  = db.QueryOptionsFactory(ds.t, "", nil, nil).SetLimit(nil)
+	)
 
-	if _, rows, err := db.Fetch(db.FetchOptionsFactory(ds.t, "", nil)); err != nil {
-		return acl, msg.Get("25").SetArgs(err).M2E()
+	if _, rows, err := db.Fetch(qo); err != nil {
+		return acl, err
 	} else {
 		for _, row := range rows {
 			data, _ := json.Marshal(row)
