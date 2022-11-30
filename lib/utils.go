@@ -10,3 +10,10 @@ func DeRefPtr(v interface{}) interface{} {
 	}
 	return v
 }
+
+// Reset pointer to its type zero value
+func Reset(v interface{}) {
+
+	p := reflect.ValueOf(v).Elem()
+	p.Set(reflect.Zero(p.Type()))
+}

@@ -126,14 +126,22 @@ func Fetch(qo *QueryOptions) (FetchResultSetMeta, []interface{}, error) {
 
 	// iterate results
 	for rows.Next() {
+
 		if err := rows.Scan(ms.AddrWithCols(qo.Column, &qo.Table)...); err != nil {
 			return meta, results, err
 		}
+
 		// dig... get parent data
 		if err := dig(qo); err != nil {
 			return meta, results, err
 		}
+
 		results = append(results, lib.DeRefPtr(qo.Table))
+
+		// Assign qo.Table its type's zero value.
+		// If not, a dirty value could trespass to
+		// to the next result.
+		lib.Reset(qo.Table)
 	}
 
 	// check for iteration errors

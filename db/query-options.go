@@ -157,7 +157,7 @@ func (qo *QueryOptions) setEqual(cols []string, upar UParams, qpar QParams) bool
 	// Incomplete Primary params will be catched
 	// as Url params anyways.
 	if (len(qo.Equal[Primary]) == len(pk)) && (len(pk) > 0) {
-		for k, _ := range qo.Equal[Primary] {
+		for k := range qo.Equal[Primary] {
 			delete(qo.Equal[Url], k)
 		}
 		return true
@@ -188,7 +188,7 @@ func (qo *QueryOptions) setIsNotNull(cols []string, qpar QParams) {
 	if notnull, ok := qpar["notnull"]; ok {
 		for _, k := range cols {
 			if lib.Contains(notnull, k) {
-				qo.IsNull = append(qo.IsNotNull, k)
+				qo.IsNotNull = append(qo.IsNotNull, k)
 			}
 		}
 	}
