@@ -24,10 +24,10 @@ func ByID(t Table, id ...string) error {
 
 	if qo := QueryOptionsFactory(t, "", nil, w); !qo.IsPrimary() {
 		return new(ParamError)
-	} else if _, data, err := Find(qo); err != nil {
+	} else if _, err := Find(qo); err != nil {
 		return err
 	} else {
-		data, _ := json.Marshal(data)
+		data, _ := json.Marshal(qo.Table)
 		json.Unmarshal(data, &t)
 	}
 

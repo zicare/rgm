@@ -23,7 +23,7 @@ type QueryOptions struct {
 	Column           []string
 	Parents          []Table // Also used to set scope in find, fetch, etc.
 	Checksum         int
-	Dig              int // Flag used to include (or not) parent data in find, fetch, etc.
+	Dig              []string // Used to include parent data in find, fetch, etc.
 	Equal            map[ParamType]Params
 	IsNull           []string
 	IsNotNull        []string
@@ -64,7 +64,7 @@ func QueryOptionsFactory(t Table, uid string, qpar QParams, upar UParams,
 	qo.setColumn(cols, qpar)
 	qo.setParents(p...)
 	qo.setChecksum(qpar)
-	qo.setDig(qpar)
+	qo.setDig(cols, qpar)
 
 	// If Equal for Primary params is all set
 	// we are done here, no more options are needed.
@@ -85,6 +85,9 @@ func QueryOptionsFactory(t Table, uid string, qpar QParams, upar UParams,
 		qo.setOrder(cols, qpar)
 		qo.setOffset(qpar)
 		qo.setLimit(qpar)
+	} else {
+		limit := config.Config().GetInt("param.icpp_max")
+		qo.SetLimit(&limit)
 	}
 
 	return qo
@@ -131,17 +134,6 @@ func (qo *QueryOptions) setEqual(cols []string, upar UParams, qpar QParams) bool
 		}
 	}
 
-	// If Equal for Primary params is all set
-	// we are done here, no more params are needed.
-	// If not, reset incomplete Primary params and
-	// continue with Url params. Incomplete Primary
-	// params will be catched as Url params.
-	if (len(qo.Equal[Primary]) == len(pk)) && (len(pk) > 0) {
-		return true
-	} else {
-		qo.Equal[Primary] = make(Params)
-	}
-
 	// Set Equal for Url params
 	for _, k := range cols {
 		if v, ok := upar[k]; ok {
@@ -149,7 +141,7 @@ func (qo *QueryOptions) setEqual(cols []string, upar UParams, qpar QParams) bool
 		}
 	}
 
-	// Set Equal for Url params
+	// Set Equal for Query params
 	if eq, ok := qpar["eq"]; ok {
 		for _, k := range eq {
 			j := strings.Split(k, "|")
@@ -159,7 +151,21 @@ func (qo *QueryOptions) setEqual(cols []string, upar UParams, qpar QParams) bool
 		}
 	}
 
-	return false
+	// If Equal for Primary params is all set
+	// remove those entries from Url params.
+	// If not, reset incomplete Primary params.
+	// Incomplete Primary params will be catched
+	// as Url params anyways.
+	if (len(qo.Equal[Primary]) == len(pk)) && (len(pk) > 0) {
+		for k, _ := range qo.Equal[Primary] {
+			delete(qo.Equal[Url], k)
+		}
+		return true
+	} else {
+		qo.Equal[Primary] = make(Params)
+		return false
+	}
+
 }
 
 func (qp *QueryOptions) setIsNull(cols []string, qpar QParams) {
@@ -337,9 +343,23 @@ func (qo *QueryOptions) setChecksum(qpar QParams) {
 	}
 }
 
-func (qo *QueryOptions) setDig(qpar QParams) {
+func (qo *QueryOptions) setDig(cols []string, qpar QParams) {
 
-	if dig, ok := qpar["dig"]; ok && (dig[0] == "1") {
-		qo.Dig = 1
+	if dig, ok := qpar["dig"]; ok {
+		qo.Dig = dig
+	} else {
+		qo.Dig = []string{}
 	}
+
+	/*
+		qo.Dig = []string{}
+
+		if dig, ok := qpar["dig"]; ok {
+			for _, k := range cols {
+				if lib.Contains(dig, k) {
+					qo.Dig = append(qo.Dig, k)
+				}
+			}
+		}
+	*/
 }

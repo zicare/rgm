@@ -102,6 +102,5 @@ func Cols(tbl Table) (f []string) {
 			f = append(f, db)
 		}
 	}
-
 	return f
 }

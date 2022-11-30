@@ -16,7 +16,7 @@ type Table interface {
 	Name() string
 
 	// Must attach foreign table data if available
-	Dig()
+	Dig(f ...string) []Dig
 
 	// Must set conditions to filter out content
 	// not intended for the user uid making the request
@@ -34,7 +34,10 @@ type Table interface {
 type BaseTable struct{}
 
 // Dig exported
-func (BaseTable) Dig() {}
+func (BaseTable) Dig(f ...string) []Dig {
+
+	return []Dig{}
+}
 
 // Scope exported
 func (BaseTable) Scope(uid string, t ...Table) map[string]string {

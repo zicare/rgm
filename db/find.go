@@ -14,8 +14,24 @@ type FindResultSetMeta struct {
 	Checksum string
 }
 
+// Supports nested finds.
+// Supports parent resources data retrieval.
+// If a parent resource is not found, Find is aborted with a NotFoundError.
+// Resources can implement custom logic in the Scope method
+// to impose addtional constraints based on qo.UID, which is intended to hold
+// the requesting user id.
+func Find(qos ...*QueryOptions) (meta FindResultSetMeta, err error) {
+
+	for _, qo := range qos {
+		if meta, err = find(qo); err != nil {
+			return meta, err
+		}
+	}
+	return meta, nil
+}
+
 // Find exported
-func Find(qo *QueryOptions) (FindResultSetMeta, interface{}, error) {
+func find(qo *QueryOptions) (FindResultSetMeta, error) {
 
 	var (
 		meta = FindResultSetMeta{Checksum: "*"}
@@ -28,15 +44,14 @@ func Find(qo *QueryOptions) (FindResultSetMeta, interface{}, error) {
 		sb.Where(sb.Equal(k, v))
 	}
 
-	// set where Equal
-	if qo.IsPrimary() {
-		for k, v := range qo.Equal[Primary] {
-			sb.Where(sb.Equal(k, v))
-		}
-	} else {
-		for k, v := range qo.Equal[Url] {
-			sb.Where(sb.Equal(k, v))
-		}
+	// set where Equal for Primary param
+	for k, v := range qo.Equal[Primary] {
+		sb.Where(sb.Equal(k, v))
+	}
+
+	// set where Equal for Url param
+	for k, v := range qo.Equal[Url] {
+		sb.Where(sb.Equal(k, v))
 	}
 
 	// build the sql
@@ -44,13 +59,14 @@ func Find(qo *QueryOptions) (FindResultSetMeta, interface{}, error) {
 
 	// execute query
 	if err := Db().QueryRow(q, args...).Scan(ms.Addr(&qo.Table)...); err == sql.ErrNoRows {
-		return meta, qo.Table, new(NotFoundError)
+		return meta, new(NotFoundError)
 	} else if err != nil {
-		return meta, qo.Table, err
+		return meta, err
 	}
 
-	if qo.Dig == 1 {
-		qo.Table.Dig()
+	// dig...  get parent data
+	if err := dig(qo); err != nil {
+		return meta, err
 	}
 
 	// Response headers meta
@@ -60,5 +76,5 @@ func Find(qo *QueryOptions) (FindResultSetMeta, interface{}, error) {
 		meta.Checksum = strconv.FormatUint(uint64(checksum), 16)
 	}
 
-	return meta, qo.Table, nil
+	return meta, nil
 }

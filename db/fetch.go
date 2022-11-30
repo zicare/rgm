@@ -17,7 +17,12 @@ type FetchResultSetMeta struct {
 	Checksum string
 }
 
-// Fetch exported
+// Supports nested Fetch.
+// Supports parent resources data retrieval.
+// If a parent resource is not found, Fetch is aborted with a NotFoundError.
+// Resources can implement custom logic in the Scope method
+// to impose addtional constraints based on qo.UID, which is intended to hold
+// the requesting user id.
 func Fetch(qo *QueryOptions) (FetchResultSetMeta, []interface{}, error) {
 
 	var (
@@ -30,6 +35,16 @@ func Fetch(qo *QueryOptions) (FetchResultSetMeta, []interface{}, error) {
 
 	// set where scope
 	for k, v := range qo.Table.Scope(qo.UID, qo.Parents...) {
+		sb.Where(sb.Equal(k, v))
+	}
+
+	// set where Equal for Url param
+	for k, v := range qo.Equal[Url] {
+		sb.Where(sb.Equal(k, v))
+	}
+
+	// set where Equal for Query param
+	for k, v := range qo.Equal[Query] {
 		sb.Where(sb.Equal(k, v))
 	}
 
@@ -51,11 +66,6 @@ func Fetch(qo *QueryOptions) (FetchResultSetMeta, []interface{}, error) {
 	// set where NotIn
 	for k, v := range qo.NotIn {
 		sb.Where(sb.NotIn(k, v...))
-	}
-
-	// set where Equal
-	for k, v := range qo.Equal[Query] {
-		sb.Where(sb.Equal(k, v))
 	}
 
 	// set where NotEqual
@@ -119,8 +129,9 @@ func Fetch(qo *QueryOptions) (FetchResultSetMeta, []interface{}, error) {
 		if err := rows.Scan(ms.AddrWithCols(qo.Column, &qo.Table)...); err != nil {
 			return meta, results, err
 		}
-		if qo.Dig == 1 {
-			qo.Table.Dig()
+		// dig... get parent data
+		if err := dig(qo); err != nil {
+			return meta, results, err
 		}
 		results = append(results, lib.DeRefPtr(qo.Table))
 	}

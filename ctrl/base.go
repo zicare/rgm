@@ -13,11 +13,14 @@ import (
 type BaseController struct{}
 
 // Supports endpoints with nested resources in path.
-// If a parent resource is not found, Find is aborted with a NotFoundError.
-// Child resources can implement custom logic in the Scope method
+// t is the resource type to be found.
+// p are the parent resources' types, if any. Ordered as they
+// appear in endpoint's path.
+// c holds url and query params, dictates which specific resource
+// is to be found.
+// Resources can implement custom logic in the Scope method
 // to impose addtional constraints based on the requesting user UID
-// and parent resources, both of which are made available within Scope method
-// by Find.
+// and parent resources.
 func (bc BaseController) Find(c *gin.Context, t db.Table, p ...db.Table) {
 
 	if qo, pqos, e := bc.getQueryOptions(c, true, t, p...); e != nil {
@@ -25,37 +28,34 @@ func (bc BaseController) Find(c *gin.Context, t db.Table, p ...db.Table) {
 			http.StatusBadRequest,
 			gin.H{"message": msg.Get("26")},
 		)
-	} else {
-		pqos = append(pqos, qo)
-		for i, qo := range pqos {
-			if meta, data, err := db.Find(qo); err != nil {
-				switch err.(type) {
-				case *db.NotFoundError:
-					c.JSON(
-						http.StatusNotFound,
-						gin.H{"message": msg.Get("18")},
-					)
-				default:
-					c.JSON(
-						http.StatusInternalServerError,
-						gin.H{"message": msg.Get("25").SetArgs(err.Error())},
-					)
-				}
-				return
-			} else if i == len(pqos)-1 {
-				c.Header("X-Checksum", meta.Checksum)
-				c.JSON(http.StatusOK, data)
-			}
+	} else if meta, err := db.Find(append(pqos, qo)...); err != nil {
+		switch err.(type) {
+		case *db.NotFoundError:
+			c.JSON(
+				http.StatusNotFound,
+				gin.H{"message": msg.Get("18")},
+			)
+		default:
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+			)
 		}
+	} else {
+		c.Header("X-Checksum", meta.Checksum)
+		c.JSON(http.StatusOK, qo.Table)
 	}
 }
 
 // Supports endpoints with nested resources in path.
-// If a parent resource is not found, the Fetch is aborted with a NotFoundError.
-// Child resources can implement custom logic in the Scope method
+// t is the type of resources to be fetches.
+// p are the common parent resources, if any. Ordered as they
+// appear in endpoint's path.
+// c holds url and query params, dictates which specific resources
+// are to be fetched.
+// Resources can implement custom logic in the Scope method
 // to impose addtional constraints based on the requesting user UID
-// and parent resources, both of which are made available within Scope method
-// by Fetch.
+// and parent resources.
 func (bc BaseController) Fetch(c *gin.Context, t db.Table, p ...db.Table) {
 
 	if qo, pqos, e := bc.getQueryOptions(c, false, t, p...); e != nil {
@@ -63,80 +63,68 @@ func (bc BaseController) Fetch(c *gin.Context, t db.Table, p ...db.Table) {
 			http.StatusBadRequest,
 			gin.H{"message": msg.Get("26")},
 		)
-	} else {
-		for _, pqo := range pqos {
-			if _, _, err := db.Find(pqo); err != nil {
-				switch err.(type) {
-				case *db.NotFoundError:
-					c.JSON(
-						http.StatusNotFound,
-						gin.H{"message": msg.Get("18")},
-					)
-				default:
-					c.JSON(
-						http.StatusInternalServerError,
-						gin.H{"message": msg.Get("25").SetArgs(err.Error())},
-					)
-				}
-				return
-			}
-		}
-		if meta, data, err := db.Fetch(qo); err != nil {
+	} else if _, err := db.Find(pqos...); err != nil {
+		switch err.(type) {
+		case *db.NotFoundError:
+			c.JSON(
+				http.StatusNotFound,
+				gin.H{"message": msg.Get("18")},
+			)
+		default:
 			c.JSON(
 				http.StatusInternalServerError,
 				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
 			)
-		} else {
-			c.Header("X-Range", meta.Range)
-			c.Header("X-Checksum", meta.Checksum)
-			c.JSON(http.StatusOK, data)
 		}
+	} else if meta, data, err := db.Fetch(qo); err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+		)
+	} else if c.Request.Method == "HEAD" {
+		c.Header("X-Range", meta.Range)
+		c.Header("X-Checksum", meta.Checksum)
+	} else {
+		c.Header("X-Range", meta.Range)
+		c.Header("X-Checksum", meta.Checksum)
+		c.JSON(http.StatusOK, data)
 	}
 }
 
 // Supports single and multiple deletes.
 // Supports endpoints with nested resources in path.
-// If a parent resource is not found, Delete is aborted with a NotFoundError.
-// Child resources can implement custom logic in the Scope method
+// t is the type of the resource, or resources, to be deleted.
+// p are the common parent resources' types, if any. Ordered as they
+// appear in endpoint's path.
+// c holds url and query params, dictates which specific resources
+// are to be found and delete.
+// Resources can implement custom logic in the Scope method
 // to determine, whether o not, to abort Delete based on the parent
 // resources finding result.
 // Child resources can also implement custom logic in the BeforeDelete method
 // to impose addtional constraints based on the requesting user UID
-// and parent resources, both of which are made available within BeforeDelete method
-// by Delete. BeforeDelete can also return a flag to abort Delete altogether.
+// and parent resources. BeforeDelete can also return a flag to abort Delete altogether.
 func (bc BaseController) Delete(c *gin.Context, t db.Table, p ...db.Table) {
 
-	qo, pqos, e := bc.getQueryOptions(c, false, t, p...)
-
-	if e != nil {
+	if qo, pqos, e := bc.getQueryOptions(c, false, t, p...); e != nil {
 		c.JSON(
 			http.StatusBadRequest,
 			gin.H{"message": msg.Get("26")},
 		)
-		return
-	}
-
-	// Verify parent resources exist and are within read scope
-	for _, pqo := range pqos {
-		if _, _, err := db.Find(pqo); err != nil {
-			switch err.(type) {
-			case *db.NotFoundError:
-				c.JSON(
-					http.StatusNotFound,
-					gin.H{"message": msg.Get("18")},
-				)
-			default:
-				c.JSON(
-					http.StatusInternalServerError,
-					gin.H{"message": msg.Get("25").SetArgs(err.Error())},
-				)
-			}
-			return
+	} else if _, err := db.Find(pqos...); err != nil { // Verify parent resources.
+		switch err.(type) {
+		case *db.NotFoundError:
+			c.JSON(
+				http.StatusNotFound,
+				gin.H{"message": msg.Get("18")},
+			)
+		default:
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+			)
 		}
-	}
-
-	// Proceed with delete.
-	if r, err := db.Delete(qo); err != nil {
+	} else if r, err := db.Delete(qo); err != nil { // Proceed with delete.
 		switch err.(type) {
 		case *db.NotAllowedError:
 			c.JSON(
@@ -149,7 +137,7 @@ func (bc BaseController) Delete(c *gin.Context, t db.Table, p ...db.Table) {
 				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
 			)
 		}
-	} else {
+	} else { // Delete ok.
 		c.JSON(
 			http.StatusOK,
 			gin.H{"message": msg.Get("29").SetArgs(r)},

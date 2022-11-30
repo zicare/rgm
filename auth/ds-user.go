@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// UserDS implementations are used
+// UserDS implementations can be used
 // to authenticate users by username and password.
 type UserDS interface {
 
@@ -49,10 +49,10 @@ func (ds TUserDS) GetUser(username, password string) (User, error) {
 	w := make(db.UParams)
 	w[f[3]] = username
 
-	if _, data, err := db.Find(db.QueryOptionsFactory(ds.t, "", nil, w)); err != nil {
+	if _, err := db.Find(db.QueryOptionsFactory(ds.t, "", nil, w)); err != nil {
 		return u, err
 	} else {
-		data, _ := json.Marshal(data)
+		data, _ := json.Marshal(ds.t)
 		json.Unmarshal(data, &u)
 	}
 
