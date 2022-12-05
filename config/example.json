@@ -1,8 +1,9 @@
 {
-    "env": "test",
+    "env": "example",
     "pepper": "secret-random-string",
     "hmac_key": "secret-hmac-key",
     "jwt_duration" : "1h",
+    "tz" : "America/Mexico_City",
     "server" : {
         "ip": "127.0.0.1",
         "domain": "localhost",
@@ -17,16 +18,24 @@
         "max_open_conns": 5
     },
     "smtp": {
-        "host": "localhost",
-        "port": 587,
-        "user": "user@localhost",
+        "host": "smtp.mail.com",
+        "port": 465,
+        "user": "me@mail.com",
         "password": "secret",
         "retries": 3,
-        "retry_interval": "1m"
+        "retry_interval": "1m",
+		"timeout": 30000000000
+    },
+    "account": {
+        "pins_length": 5
     },
     "tps": {
         "precision": 10,
         "clean_up_cycle": 1,
         "penalty_factor": 1
+    },
+    "param": {
+        "icpp": 10,
+        "icpp_max": 100
     }
 }

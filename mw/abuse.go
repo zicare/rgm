@@ -19,26 +19,34 @@ func Abuse() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if u, ok := c.Get("User"); !ok {
+
 			c.AbortWithStatusJSON(
-				http.StatusUnauthorized,
-				gin.H{"message": msg.Get("8")},
+				http.StatusInternalServerError,
+				msg.Get("5"),
 			)
+
 		} else if u, ok := u.(auth.User); !ok {
+
 			c.AbortWithStatusJSON(
-				http.StatusUnauthorized,
-				gin.H{"message": msg.Get("8")},
+				http.StatusInternalServerError,
+				msg.Get("5"),
 			)
+
 		} else if tps.IsEnabled() {
+
 			// Check for abuse
 			if date := tps.Transaction(u.Type, u.UID, u.TPS); date != nil && date.After(time.Now()) {
 				// TPS limit exceeded
 				c.AbortWithStatusJSON(
 					http.StatusTooManyRequests,
-					gin.H{"message": msg.Get("10").SetArgs(date)},
+					msg.Get("10").SetArgs(date),
 				)
 			}
+
 		} else {
+
 			c.Next()
+
 		}
 
 	}

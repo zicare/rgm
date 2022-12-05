@@ -19,18 +19,16 @@ func Authorization() gin.HandlerFunc {
 
 		if u, ok := c.Get("User"); !ok {
 
-			//Not enough permissions
 			c.AbortWithStatusJSON(
-				http.StatusUnauthorized,
-				gin.H{"message": msg.Get("8")},
+				http.StatusInternalServerError,
+				msg.Get("5"),
 			)
 
 		} else if u, ok := u.(auth.User); !ok {
 
-			//Not enough permissions
 			c.AbortWithStatusJSON(
 				http.StatusUnauthorized,
-				gin.H{"message": msg.Get("8")},
+				msg.Get("5"),
 			)
 
 		} else {
@@ -42,14 +40,14 @@ func Authorization() gin.HandlerFunc {
 			}
 
 			if valid := g.Valid(); !valid {
-				//Not enough permissions
 				c.AbortWithStatusJSON(
 					http.StatusUnauthorized,
-					gin.H{"message": msg.Get("8")},
+					msg.Get("8"),
 				)
 			}
+
+			c.Next()
 		}
 
-		c.Next()
 	}
 }

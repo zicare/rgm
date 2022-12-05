@@ -14,6 +14,11 @@ type PingTestError struct {
 	msg.Message
 }
 
+// InsertError exported
+type InsertError struct {
+	msg.Message
+}
+
 // NotFoundError exported
 type NotFoundError struct {
 	msg.Message

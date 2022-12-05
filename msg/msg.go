@@ -76,5 +76,8 @@ func _init() {
 	//msg["30"] = New("30", "Auth tags no set")
 	msg["31"] = New("31", "TPS penalty factor must be between %s and %s")
 	msg["32"] = New("32", "Token revoked")
+	msg["33"] = New("33", "PIN request accepted")
+	msg["34"] = New("34", "DB Insert error")
+	msg["35"] = New("35", "Created!")
 	//msg["29"] = New("33", "CORS tags are not properly set")
 }

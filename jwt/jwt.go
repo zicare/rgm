@@ -62,6 +62,16 @@ func (j JWT) ToString() string {
 	return j.token
 }
 
+func (j JWT) GetHeader() Header {
+
+	return j.header
+}
+
+func (j JWT) GetPayload() Payload {
+
+	return j.payload
+}
+
 // Decode exported
 func Decode(token string) (Payload, error) {
 

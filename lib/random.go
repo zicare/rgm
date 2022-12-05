@@ -10,9 +10,9 @@ import (
 func RandString(n int) string {
 
 	const (
-		letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" // 52 possibilities
-		letterIdxBits = 6                                                      // 6 bits to represent 64 possibilities / indexes
-		letterIdxMask = 1<<letterIdxBits - 1                                   // All 1-bits, as many as letterIdxBits
+		letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" // 52 possibilities
+		letterIdxBits = 6                                                                // 6 bits to represent 64 possibilities / indexes
+		letterIdxMask = 1<<letterIdxBits - 1                                             // All 1-bits, as many as letterIdxBits
 		letterIdxMax  = 63
 	)
 

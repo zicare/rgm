@@ -4,8 +4,12 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	"github.com/zicare/rgm/auth"
 	"github.com/zicare/rgm/config"
 	"github.com/zicare/rgm/db"
@@ -26,7 +30,7 @@ import (
 func BHC(t db.Table, h gin.HandlerFunc) gin.HandlersChain {
 
 	handlersChain := gin.HandlersChain{}
-	handlersChain = append(handlersChain, mw.BasicAuthentication(auth.TUserDSFactory(t)))
+	handlersChain = append(handlersChain, mw.BasicAuthentication(t))
 	handlersChain = append(handlersChain, mw.Abuse())
 	return append(handlersChain, h)
 }
@@ -57,6 +61,13 @@ func Init(environment string, acl db.Table, messages []msg.Message) (verbose []s
 		verbose = append(verbose, "Binary path... ok")
 		verbose = append(verbose, "Config file... ok")
 		verbose = append(verbose, "Log directory... ok")
+	}
+
+	// Set timezone
+	if os.Setenv("TZ", config.Config().GetString("tz")); err != nil {
+		return verbose, err
+	} else {
+		verbose = append(verbose, "Timezone set... ok")
 	}
 
 	// Initialize msg
@@ -95,6 +106,20 @@ func Init(environment string, acl db.Table, messages []msg.Message) (verbose []s
 		return verbose, err
 	} else {
 		verbose = append(verbose, "TPS control... ok")
+	}
+
+	// Validation setup
+	// This is a workaround for FieldError.Field() bug
+	// in validation v10, that returns the actual struct field name
+	// instead of the json name, which is needed for custom error messages.
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+			if name == "-" {
+				return ""
+			}
+			return name
+		})
 	}
 
 	return verbose, nil

@@ -23,3 +23,18 @@ type InvalidCredentials struct {
 type ExpiredCredentials struct {
 	msg.Message
 }
+
+// PINTagsError exported
+type PINTagsError struct {
+	msg.Message
+}
+
+// InvalidPIN exported
+type InvalidPIN struct {
+	msg.Message
+}
+
+// ExpiredPIN exported
+type ExpiredPIN struct {
+	msg.Message
+}

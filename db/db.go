@@ -18,7 +18,7 @@ func Init() error {
 	var (
 		err  error
 		cf   = config.Config()
-		conn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
+		conn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&loc=Local",
 			cf.GetString("db.user"),
 			cf.GetString("db.password"),
 			cf.GetString("db.host"),

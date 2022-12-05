@@ -17,47 +17,55 @@ import (
 // value: auth.User
 // In order to pass user's system access date range must be valid.
 // Client code can implement custom UserDS or use auth.UserTable.
-func BasicAuthentication(ds auth.UserDS) gin.HandlerFunc {
+func BasicAuthentication(t db.Table) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
-		// Get usr and pwd from http request headers
-		username, password, ok := c.Request.BasicAuth()
-		if ok == false {
+		if ds, err := auth.TUserDSFactory(t); err != nil {
+
+			c.AbortWithStatusJSON(
+				http.StatusInternalServerError,
+				msg.Get("2").SetArgs("User"),
+			)
+
+		} else if username, password, ok := c.Request.BasicAuth(); !ok {
+
 			c.AbortWithStatusJSON(
 				http.StatusUnauthorized,
-				gin.H{"message": msg.Get("3")},
+				msg.Get("3"),
 			)
-			return
-		}
 
-		// Validate usr and pwd passed in http request headers
-		if u, e := ds.GetUser(username, password); e != nil {
-			switch e.(type) {
+		} else if u, err := ds.GetUser(username, password); err != nil {
+
+			switch err.(type) {
 			case *db.NotFoundError, *auth.InvalidCredentials:
 				c.AbortWithStatusJSON(
 					http.StatusUnauthorized,
-					gin.H{"message": msg.Get("4")},
+					msg.Get("4"),
 				)
 			case *auth.ExpiredCredentials:
 				c.AbortWithStatusJSON(
 					http.StatusUnauthorized,
-					gin.H{"message": msg.Get("6")},
+					msg.Get("6"),
 				)
 			case *auth.UserTagsError:
 				c.AbortWithStatusJSON(
 					http.StatusUnauthorized,
-					gin.H{"message": msg.Get("2").SetArgs("User")},
+					msg.Get("2").SetArgs("User"),
 				)
 			default:
 				c.AbortWithStatusJSON(
 					http.StatusInternalServerError,
-					gin.H{"message": msg.Get("25").SetArgs(e.Error())},
+					msg.Get("25").SetArgs(err.Error()),
 				)
 			}
+
 		} else {
+
 			c.Set("User", u)
+
 			c.Next()
+
 		}
 	}
 }
@@ -71,51 +79,52 @@ func JWTAuthentication() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
-		// Verify JWT authorization header is properly set
-		token := strings.Split(c.GetHeader("Authorization"), " ")
-		if (len(token) != 2) || (token[0] != "JWT") {
-			// JWT authorization header malformed
+		if token := strings.Split(c.GetHeader("Authorization"), " "); (len(token) != 2) || (token[0] != "JWT") {
+
 			c.AbortWithStatusJSON(
 				http.StatusUnauthorized,
-				gin.H{"message": msg.Get("7")},
+				msg.Get("7"),
 			)
-			return
-		}
 
-		if payload, e := jwt.Decode(token[1]); e != nil {
-			switch e.(type) {
+		} else if payload, err := jwt.Decode(token[1]); err != nil {
+
+			switch err.(type) {
 			case *jwt.InvalidToken:
 				c.AbortWithStatusJSON(
 					http.StatusUnauthorized,
-					gin.H{"message": msg.Get("12")},
+					msg.Get("12"),
 				)
 			case *jwt.InvalidTokenPayload:
 				c.AbortWithStatusJSON(
 					http.StatusUnauthorized,
-					gin.H{"message": msg.Get("13")},
+					msg.Get("13"),
 				)
 			case *jwt.TamperedToken:
 				c.AbortWithStatusJSON(
 					http.StatusUnauthorized,
-					gin.H{"message": msg.Get("14")},
+					msg.Get("14"),
 				)
 			case *jwt.ExpiredToken:
 				c.AbortWithStatusJSON(
 					http.StatusUnauthorized,
-					gin.H{"message": msg.Get("15")},
+					msg.Get("15"),
 				)
 			default:
 				c.AbortWithStatusJSON(
 					http.StatusInternalServerError,
-					gin.H{"message": msg.Get("25").SetArgs(e.Error())},
+					msg.Get("25").SetArgs(err.Error()),
 				)
 			}
+
 		} else if revoked := jwt.IsRevoked(payload); revoked {
+
 			c.AbortWithStatusJSON(
 				http.StatusUnauthorized,
-				gin.H{"message": msg.Get("32")},
+				msg.Get("32"),
 			)
+
 		} else {
+
 			c.Set("User",
 				auth.User{
 					UID:  payload.UID,
@@ -125,7 +134,9 @@ func JWTAuthentication() gin.HandlerFunc {
 					From: payload.Iat,
 					To:   payload.Exp,
 				})
+
 			c.Next()
+
 		}
 
 	}

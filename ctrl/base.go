@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/zicare/rgm/auth"
 	"github.com/zicare/rgm/db"
 	"github.com/zicare/rgm/msg"
@@ -11,6 +12,79 @@ import (
 
 // BaseController exported
 type BaseController struct{}
+
+// Supports endpoints with nested resources in path.
+// t is the resource type to be posted.
+// t can overwrite BeforeInsert method to abort insert,
+// run extra validations, or modifify values.
+// p are the parent resources' types, if any. Ordered as they
+// appear in endpoint's path.
+// c holds url and query params, dictates which specific parent
+// resources, if any, must be found.
+// Parent resources can implement custom logic in the Scope method
+// to impose addtional constraints based on the requesting user UID.
+func (bc BaseController) Post(c *gin.Context, t db.Table, p ...db.Table) {
+
+	if qo, pqos, e := bc.getQueryOptions(c, false, t, p...); e != nil {
+
+		c.JSON(
+			http.StatusBadRequest,
+			msg.Get("26"),
+		)
+
+	} else if _, err := db.Find(pqos...); err != nil {
+
+		switch err.(type) {
+		case *db.NotFoundError:
+			c.JSON(
+				http.StatusNotFound,
+				msg.Get("18"),
+			)
+		default:
+			c.JSON(
+				http.StatusInternalServerError,
+				msg.Get("25").SetArgs(err.Error()),
+			)
+		}
+
+	} else if err := c.ShouldBindJSON(t); err != nil {
+
+		c.JSON(
+			http.StatusBadRequest,
+			t.ValidationErrors(err),
+		)
+
+	} else if err := db.Insert(qo); err != nil {
+
+		switch err.(type) {
+		case *db.NotFoundError:
+			// Resource created but out of the read scope.
+			c.JSON(
+				http.StatusNoContent,
+				msg.Get("35"),
+			)
+		case validator.ValidationErrors: //, *time.ParseError, *json.UnmarshalTypeError
+			// Payload didn't pass Table's BeforeInsert validation.
+			c.JSON(
+				http.StatusBadRequest,
+				t.ValidationErrors(err),
+			)
+		default:
+			c.JSON(
+				http.StatusInternalServerError,
+				msg.Get("25").SetArgs(err.Error()),
+			)
+		}
+
+	} else {
+
+		c.JSON(
+			http.StatusCreated,
+			t,
+		)
+
+	}
+}
 
 // Supports endpoints with nested resources in path.
 // t is the resource type to be found.
@@ -24,26 +98,35 @@ type BaseController struct{}
 func (bc BaseController) Find(c *gin.Context, t db.Table, p ...db.Table) {
 
 	if qo, pqos, e := bc.getQueryOptions(c, true, t, p...); e != nil {
+
 		c.JSON(
 			http.StatusBadRequest,
-			gin.H{"message": msg.Get("26")},
+			msg.Get("26"),
 		)
+
 	} else if meta, err := db.Find(append(pqos, qo)...); err != nil {
+
 		switch err.(type) {
 		case *db.NotFoundError:
 			c.JSON(
 				http.StatusNotFound,
-				gin.H{"message": msg.Get("18")},
+				msg.Get("18"),
 			)
 		default:
 			c.JSON(
 				http.StatusInternalServerError,
-				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+				msg.Get("25").SetArgs(err.Error()),
 			)
 		}
+
 	} else {
+
 		c.Header("X-Checksum", meta.Checksum)
-		c.JSON(http.StatusOK, qo.Table)
+		c.JSON(
+			http.StatusOK,
+			qo.Table,
+		)
+
 	}
 }
 
@@ -59,35 +142,45 @@ func (bc BaseController) Find(c *gin.Context, t db.Table, p ...db.Table) {
 func (bc BaseController) Fetch(c *gin.Context, t db.Table, p ...db.Table) {
 
 	if qo, pqos, e := bc.getQueryOptions(c, false, t, p...); e != nil {
+
 		c.JSON(
 			http.StatusBadRequest,
-			gin.H{"message": msg.Get("26")},
+			msg.Get("26"),
 		)
+
 	} else if _, err := db.Find(pqos...); err != nil {
+
 		switch err.(type) {
 		case *db.NotFoundError:
 			c.JSON(
 				http.StatusNotFound,
-				gin.H{"message": msg.Get("18")},
+				msg.Get("18"),
 			)
 		default:
 			c.JSON(
 				http.StatusInternalServerError,
-				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+				msg.Get("25").SetArgs(err.Error()),
 			)
 		}
+
 	} else if meta, data, err := db.Fetch(qo); err != nil {
+
 		c.JSON(
 			http.StatusInternalServerError,
-			gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+			msg.Get("25").SetArgs(err.Error()),
 		)
+
 	} else if c.Request.Method == "HEAD" {
+
 		c.Header("X-Range", meta.Range)
 		c.Header("X-Checksum", meta.Checksum)
+
 	} else {
+
 		c.Header("X-Range", meta.Range)
 		c.Header("X-Checksum", meta.Checksum)
 		c.JSON(http.StatusOK, data)
+
 	}
 }
 
@@ -107,41 +200,49 @@ func (bc BaseController) Fetch(c *gin.Context, t db.Table, p ...db.Table) {
 func (bc BaseController) Delete(c *gin.Context, t db.Table, p ...db.Table) {
 
 	if qo, pqos, e := bc.getQueryOptions(c, false, t, p...); e != nil {
+
 		c.JSON(
 			http.StatusBadRequest,
-			gin.H{"message": msg.Get("26")},
+			msg.Get("26"),
 		)
+
 	} else if _, err := db.Find(pqos...); err != nil { // Verify parent resources.
+
 		switch err.(type) {
 		case *db.NotFoundError:
 			c.JSON(
 				http.StatusNotFound,
-				gin.H{"message": msg.Get("18")},
+				msg.Get("18"),
 			)
 		default:
 			c.JSON(
 				http.StatusInternalServerError,
-				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+				msg.Get("25").SetArgs(err.Error()),
 			)
 		}
-	} else if r, err := db.Delete(qo); err != nil { // Proceed with delete.
+
+	} else if r, err := db.Delete(qo); err != nil {
+
 		switch err.(type) {
 		case *db.NotAllowedError:
 			c.JSON(
 				http.StatusUnauthorized,
-				gin.H{"message": msg.Get("11")},
+				msg.Get("11"),
 			)
 		default:
 			c.JSON(
 				http.StatusInternalServerError,
-				gin.H{"message": msg.Get("25").SetArgs(err.Error())},
+				msg.Get("25").SetArgs(err.Error()),
 			)
 		}
-	} else { // Delete ok.
+
+	} else {
+
 		c.JSON(
 			http.StatusOK,
-			gin.H{"message": msg.Get("29").SetArgs(r)},
+			msg.Get("29").SetArgs(r),
 		)
+
 	}
 
 }
