@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zicare/rgm/auth"
+	"github.com/zicare/rgm/ds"
 	"github.com/zicare/rgm/jwt"
 	"github.com/zicare/rgm/msg"
 )
@@ -22,7 +22,7 @@ func (ctrl JwtController) Get(c *gin.Context) {
 			msg.Get("5"),
 		)
 
-	} else if u, ok := u.(auth.User); !ok {
+	} else if u, ok := u.(ds.User); !ok {
 
 		c.JSON(
 			http.StatusInternalServerError,

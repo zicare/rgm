@@ -1,76 +1,56 @@
 package ctrl
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zicare/rgm/auth"
-	"github.com/zicare/rgm/db"
+	"github.com/zicare/rgm/ds"
 	"github.com/zicare/rgm/msg"
 )
 
 // PinController exported
 type PinController struct{}
 
-// Post exported
-// Save PIN to db and sends it back.
-// p is the Table for pins, must have proper pin tags.
-// u is the Table for users, must have proper user tags.
-// Check auth.TPINDSFactory for more information.
-func (ctrl PinController) Post(c *gin.Context, p, u db.Table) {
+// Post saves a pin to PinDataStore and sends it back to requesting user by email.
+func (ctrl PinController) Post(c *gin.Context, fn ds.PinDSFactory, p ds.IDataStore, u ds.IDataStore) {
 
-	var pin auth.PIN
+	d := &struct {
+		Email string `json:"usr" binding:"required,email"`
+	}{}
 
-	if tpds, err := auth.TPINDSFactory(p, u); err != nil {
+	if dst, err := fn(p, u); err != nil {
 
 		c.JSON(
 			http.StatusInternalServerError,
-			msg.Get("2").SetArgs("PIN/User"),
+			msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
 		)
 
-	} else if err := c.ShouldBindJSON(p); err != nil {
+	} else if err := c.ShouldBindJSON(d); err != nil {
 
 		c.JSON(
 			http.StatusBadRequest,
-			p.ValidationErrors(err),
+			msg.ValidationErrors(err),
 		)
 
-	} else if data, err := json.Marshal(p); err != nil {
-
-		c.JSON(
-			http.StatusInternalServerError,
-			msg.Get("25").SetArgs(err),
-		)
-
-	} else if err := json.Unmarshal(data, &pin); err != nil {
-
-		c.JSON(
-			http.StatusInternalServerError,
-			msg.Get("25").SetArgs(err),
-		)
-
-	} else if _, err := tpds.PostPIN(pin.Email); err != nil {
+	} else if p, err := dst.Post(d.Email); err != nil {
 
 		switch err.(type) {
-		case *auth.InvalidCredentials:
+		case *ds.InvalidCredentials, *ds.ExpiredCredentials:
 			c.JSON(
 				http.StatusAccepted,
 				msg.Get("33"),
 			)
-		case *db.InsertError:
-			c.JSON(
-				http.StatusInternalServerError,
-				msg.Get("34"),
-			)
 		default:
 			c.JSON(
 				http.StatusInternalServerError,
-				msg.Get("25").SetArgs(err),
+				msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
 			)
 		}
 
 	} else {
+
+		p.Send()
 
 		c.JSON(
 			http.StatusAccepted,
@@ -81,8 +61,57 @@ func (ctrl PinController) Post(c *gin.Context, p, u db.Table) {
 
 }
 
-// Patch exported
-func (ctrl PinController) Patch(c *gin.Context, t db.Table) {
+// Patch updates the password in IUserDataStore.
+func (ctrl PinController) Patch(c *gin.Context, fn ds.PinDSFactory, p ds.IDataStore, u ds.IDataStore) {
 
-	c.JSON(http.StatusOK, t)
+	dst, err := fn(p, u)
+	if err != nil {
+		c.JSON(
+			http.StatusInternalServerError,
+			msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
+		)
+	}
+
+	pr := ds.PatchReceiver()
+	if err := c.ShouldBindJSON(pr); err != nil {
+		c.JSON(
+			http.StatusBadRequest,
+			msg.ValidationErrors(err),
+		)
+		return
+	}
+
+	patch := ds.PatchDecoder(pr)
+	if err := dst.PatchPwd(patch); err != nil {
+
+		ml := []msg.Message{}
+		switch err.(type) {
+		case *ds.InvalidCredentials:
+			ml = append(ml, msg.Get("4").SetField("usr"))
+		case *ds.ExpiredCredentials:
+			ml = append(ml, msg.Get("6").SetField("usr"))
+		case *ds.InvalidPinError:
+			ml = append(ml, msg.Get("36").SetField("pin"))
+		case *ds.ExpiredPinError:
+			ml = append(ml, msg.Get("39").SetField("pin"))
+		default:
+			c.JSON(
+				http.StatusInternalServerError,
+				msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
+			)
+			return
+		}
+		c.JSON(
+			http.StatusBadRequest,
+			ml,
+		)
+
+	} else {
+
+		c.JSON(
+			http.StatusOK,
+			msg.Get("38"),
+		)
+	}
+
 }

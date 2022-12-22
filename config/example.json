@@ -27,7 +27,8 @@
 		"timeout": 30000000000
     },
     "account": {
-        "pins_length": 5
+        "pins_length": 5,
+        "pwd_validation": "required,min=8"
     },
     "tps": {
         "precision": 10,

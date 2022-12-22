@@ -1,4 +1,4 @@
-package db
+package mysql
 
 import (
 	"database/sql"
@@ -28,12 +28,12 @@ func Init() error {
 
 	db, err = sql.Open("mysql", conn)
 	if err != nil {
-		return new(OpenConnError)
+		return err
 	}
 
 	err = db.Ping()
 	if err != nil {
-		return new(PingTestError)
+		return err
 	}
 
 	db.SetMaxOpenConns(cf.GetInt("db.max_open_conns"))

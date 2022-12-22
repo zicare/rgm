@@ -30,6 +30,15 @@ func (m Message) M2E() *Message {
 }
 
 //Error exported
+func (m *Message) Copy(msn Message) {
+
+	m.Key = msn.Key
+	m.Msg = msn.Msg
+	m.Args = msn.Args
+	m.Field = msn.Field
+}
+
+//Error exported
 func (m *Message) Error() string {
 	return m.String()
 }

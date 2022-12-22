@@ -1,0 +1,67 @@
+package mysql
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"hash/crc32"
+
+	"github.com/huandu/go-sqlbuilder"
+	"github.com/zicare/rgm/ds"
+)
+
+// Find returns the qo.DataStore record that matches qo settings.
+// Supports BeforeSelect(qo) and parent data retrieval through dig params.
+// If a parent resource is not found, Find is aborted with a NotFoundError.
+// Beware that qo.DataStore must implement ITable.
+func (Table) Find(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data interface{}, err error) {
+
+	t, ok := qo.DataStore.(ITable)
+	if !ok {
+		return meta, data, new(NotITableError)
+	}
+
+	s := sqlbuilder.NewStruct(qo.DataStore)
+	b := s.SelectFrom(qo.DataStore.Name())
+
+	// set before select constraints
+	if params, err := t.BeforeSelect(qo); err != nil {
+		return meta, data, new(ds.NotAllowedError)
+	} else {
+		for k, v := range params {
+			b.Where(b.Equal(k, v))
+		}
+	}
+
+	// set where Equal for Primary param
+	for k, v := range qo.Equal[ds.Primary] {
+		b.Where(b.Equal(k, v))
+	}
+
+	// set where Equal for Url param
+	for k, v := range qo.Equal[ds.Url] {
+		b.Where(b.Equal(k, v))
+	}
+
+	// build the sql
+	q, args := b.Build()
+
+	// execute query
+	if err := Db().QueryRow(q, args...).Scan(s.Addr(&t)...); err == sql.ErrNoRows {
+		return meta, data, new(ds.NotFoundError)
+	}
+
+	// dig...  get parent data
+	if err := dig(qo); err != nil { // dig err type is same as Find
+		return meta, data, err
+	}
+
+	// Response headers meta
+	if qo.Checksum == 1 {
+		bytes, _ := json.Marshal(qo.DataStore)
+		checksum := crc32.ChecksumIEEE([]byte(bytes))
+		meta.Checksum = fmt.Sprint(checksum)
+	}
+
+	return meta, qo.DataStore, nil
+}

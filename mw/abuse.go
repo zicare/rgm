@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zicare/rgm/auth"
+	"github.com/zicare/rgm/ds"
 	"github.com/zicare/rgm/msg"
 	"github.com/zicare/rgm/tps"
 )
 
-// Verify if auth.User is stored in the context
+// Verify if user.User is stored in the context
 // as key/value pair under the "User" key, meaning the user
-// was successfuly authenticated. If so, validates
+// was successfuly authenticated. If so, it validates
 // if said user TPS is being abused.
 func Abuse() gin.HandlerFunc {
 
@@ -25,7 +25,7 @@ func Abuse() gin.HandlerFunc {
 				msg.Get("5"),
 			)
 
-		} else if u, ok := u.(auth.User); !ok {
+		} else if u, ok := u.(ds.User); !ok {
 
 			c.AbortWithStatusJSON(
 				http.StatusInternalServerError,

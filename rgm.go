@@ -2,41 +2,55 @@ package rgm
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"github.com/zicare/rgm/auth"
 	"github.com/zicare/rgm/config"
-	"github.com/zicare/rgm/db"
+	"github.com/zicare/rgm/ds"
 	"github.com/zicare/rgm/jwt"
+	"github.com/zicare/rgm/lib"
 	"github.com/zicare/rgm/msg"
 	"github.com/zicare/rgm/mw"
+	"github.com/zicare/rgm/mysql"
 	"github.com/zicare/rgm/tps"
 )
 
-// Returns a gin.HandlersChain slice loaded
-// with mw.BasicAuthentication, mw.Abuse and h.
-// mw.BasicAuthentication must be passed an auth.UserDS param,
-// BHC relies for this on auth.TUserDS, a default implementation
-// of auth.UserDS that uses t as the user data store.
-// t must be propperly annotated with auth tags,
-// otherwise a 500 http response code will be issued
-// when calling mw.BasicAuthentication.
-func BHC(t db.Table, h gin.HandlerFunc) gin.HandlersChain {
+type InitOpts struct {
+	Environment  *string
+	DisableAgent *bool
+	Verbose      *bool
+	Messages     []msg.Message
+	AclDSFactory ds.AclDSFactory
+	Acl          ds.IDataStore
+}
+
+// Returns a gin.HandlersChain slice loaded with
+// mw.BasicAuthentication, mw.Abuse and h.
+// h is the actual controller function.
+func BHC(fn ds.UserDSFactory, u ds.IDataStore, crypto lib.ICrypto, h gin.HandlerFunc) gin.HandlersChain {
+
+	dst, err := fn(u)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	handlersChain := gin.HandlersChain{}
-	handlersChain = append(handlersChain, mw.BasicAuthentication(t))
+	handlersChain = append(handlersChain, mw.BasicAuthentication(dst, crypto))
 	handlersChain = append(handlersChain, mw.Abuse())
 	return append(handlersChain, h)
 }
 
-// Returns a gin.HandlersChain slice with
+// Returns a gin.HandlersChain slice loaded with
 // mw.JWTAuthentication, mw.Abuse, mw.Authorization and h.
+// h is the actual controller function.
 func JHC(h gin.HandlerFunc) gin.HandlersChain {
 
 	handlersChain := gin.HandlersChain{}
@@ -46,66 +60,72 @@ func JHC(h gin.HandlerFunc) gin.HandlersChain {
 	return append(handlersChain, h)
 }
 
-func Init(environment string, acl db.Table, messages []msg.Message) (verbose []string, err error) {
+func Init(opts InitOpts) error {
 
-	// Initialize config
-	if dir, err := filepath.Abs(filepath.Dir(os.Args[0])); err != nil {
-		return verbose, err
-	} else if err = config.Init(environment, dir); err != nil {
-		return verbose, err
-	} else if info, err := os.Stat(dir + "/log"); err != nil || !info.IsDir() {
-		return verbose, err
+	// Check paths
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		return err
+	} else if fi, err := os.Stat(dir + "/config"); err != nil || !fi.IsDir() {
+		return err
+	} else if fi, err := os.Stat(dir + "/tpl"); err != nil || !fi.IsDir() {
+		return err
+	} else if fi, err := os.Stat(dir + "/log"); err != nil || !fi.IsDir() {
+		return err
 	} else {
 		flag.Set("log_dir", dir+"/log")
 		flag.Set("stderrthreshold", "FATAL")
-		verbose = append(verbose, "Binary path... ok")
-		verbose = append(verbose, "Config file... ok")
-		verbose = append(verbose, "Log directory... ok")
 	}
 
-	// Set timezone
+	// Config
+	if err := config.Init(*opts.Environment, dir); err != nil {
+		return err
+	} else if *opts.Verbose {
+		fmt.Println("Config... OK")
+	}
+
+	// Timezone
 	if os.Setenv("TZ", config.Config().GetString("tz")); err != nil {
-		return verbose, err
-	} else {
-		verbose = append(verbose, "Timezone set... ok")
+		return err
+	} else if *opts.Verbose {
+		fmt.Println("Timezone... OK")
 	}
 
-	// Initialize msg
-	if err = msg.Init(messages); err != nil {
-		return verbose, err
-	} else {
-		verbose = append(verbose, "System messages... ok")
+	// MSG
+	if err := msg.Init(opts.Messages); err != nil {
+		return err
+	} else if *opts.Verbose {
+		fmt.Println("MSG... OK")
 	}
 
-	// Initialize db
-	if err = db.Init(); err != nil {
-		return verbose, err
-	} else {
-		verbose = append(verbose, "DB connection... ok")
+	// MySQL
+	if err := mysql.Init(); err != nil {
+		return err
+	} else if *opts.Verbose {
+		fmt.Println("MySQL... OK")
 	}
 
-	// Initialize auth
-	if acl == nil {
-		// Do nothing.
-		// Looks like client app doesn't has acl in database.
-		// Client app can always call auth.Init by itself passing
-		// custom implementation of auth.AclDS
-	} else if aclDS, err := auth.TAclDSFactory(acl); err != nil {
-		return verbose, err
-	} else if err := auth.Init(aclDS); err != nil {
-		return verbose, err
-	} else {
-		verbose = append(verbose, "Access control list... ok")
+	// ACL
+	if err := ds.Init(opts.AclDSFactory, opts.Acl); err != nil {
+		return err
+	} else if *opts.Verbose {
+		fmt.Println("ACL... OK")
 	}
 
 	// Initialize revokedJWTMap
 	jwt.Init()
+	fmt.Println("JWT revokes... OK")
 
 	// Initialize tps control
 	if err = tps.Init(); err != nil {
-		return verbose, err
+		return err
 	} else {
-		verbose = append(verbose, "TPS control... ok")
+		fmt.Println("TPS control... OK")
+	}
+
+	// Agent
+	if *opts.Verbose {
+		fmt.Println("Agent enabled..." + strconv.FormatBool(!*opts.DisableAgent))
 	}
 
 	// Validation setup
@@ -122,5 +142,5 @@ func Init(environment string, acl db.Table, messages []msg.Message) (verbose []s
 		})
 	}
 
-	return verbose, nil
+	return nil
 }
