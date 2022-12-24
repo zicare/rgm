@@ -7,6 +7,11 @@ type TagError struct {
 	msg.Message
 }
 
+// ForeignKeyConstraint exported
+type ForeignKeyConstraint struct {
+	msg.Message
+}
+
 // NotFoundError exported
 type NotFoundError struct {
 	msg.Message

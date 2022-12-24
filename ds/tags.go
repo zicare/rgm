@@ -4,7 +4,7 @@ import (
 	"reflect"
 )
 
-func dsMeta(d IDataStore) (k, f, w []string, v []interface{}, e *TagError) {
+func dsMeta(d IDataSource) (k, f, w []string, v []interface{}, e *TagError) {
 
 	r := reflect.ValueOf(d).Elem()
 	for i := 0; i < r.NumField(); i++ {
@@ -28,7 +28,7 @@ func dsMeta(d IDataStore) (k, f, w []string, v []interface{}, e *TagError) {
 }
 
 /*
-func dsWrite(d IDataStore) (fld []string, val []interface{}, e *TagError) {
+func dsWrite(d IDataSource) (fld []string, val []interface{}, e *TagError) {
 
 	v := reflect.ValueOf(d).Elem()
 	for i := 0; i < v.NumField(); i++ {
@@ -72,11 +72,11 @@ func dsWrite(d IDataStore) (fld []string, val []interface{}, e *TagError) {
 // fields, _ := TagFieldsPivoted(new(User), "auth", []string{"id","role","usr"})
 // fields -> []string{"user_id","role_id","email"}
 //
-func TagValuesPivoted(dst IDataStore, targetTagKey string, pivotTagKey string, pivotTagValues []string) ([]string, *TagError) {
+func TagValuesPivoted(dsrc IDataSource, targetTagKey string, pivotTagKey string, pivotTagValues []string) ([]string, *TagError) {
 
 	targetTagValues := make([]string, len(pivotTagValues))
 
-	t := reflect.ValueOf(dst).Elem()
+	t := reflect.ValueOf(dsrc).Elem()
 	for i := 0; i < t.NumField(); i++ {
 		if ptv, ok := t.Type().Field(i).Tag.Lookup(pivotTagKey); ok {
 			if ttv, ok := t.Type().Field(i).Tag.Lookup(targetTagKey); ok && ttv != "-" {
@@ -99,7 +99,7 @@ func TagValuesPivoted(dst IDataStore, targetTagKey string, pivotTagKey string, p
 }
 
 /*
-func TaggedFields(tbl IDataStore, tagName string, tagValues []string) ([]string, *TagError) {
+func TaggedFields(tbl IDataSource, tagName string, tagValues []string) ([]string, *TagError) {
 
 	var (
 		f = make([]string, len(tagValues))
@@ -128,7 +128,7 @@ func TaggedFields(tbl IDataStore, tagName string, tagValues []string) ([]string,
 }
 
 // Returns a slice of db fields tagged as `pk:"1"`
-func Pk(tbl IDataStore) (f []string) {
+func Pk(tbl IDataSource) (f []string) {
 
 	t := reflect.ValueOf(tbl).Elem()
 
@@ -144,7 +144,7 @@ func Pk(tbl IDataStore) (f []string) {
 }
 
 // Returns a slice of db fields tagged as `pk:"1"`
-func Cols(tbl IDataStore) (f []string) {
+func Cols(tbl IDataSource) (f []string) {
 
 	t := reflect.ValueOf(tbl).Elem()
 
@@ -156,7 +156,7 @@ func Cols(tbl IDataStore) (f []string) {
 	return f
 }
 
-func Binding(tbl IDataStore, field string) string {
+func Binding(tbl IDataSource, field string) string {
 
 	//t.Field(i).SetString("x")
 

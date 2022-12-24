@@ -6,42 +6,42 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
-// MySQL implementation of acl.IAclDataStore.
-type aclDataStore struct {
+// MySQL implementation of acl.IAclDataSource.
+type aclDataSource struct {
 	t ITable
 	f []string
 }
 
-// UserDSFactory returns an object that implements user.IUserDataStore.
-func AclDSFactory(acl ds.IDataStore) (ds.IAclDataStore, error) {
+// UserDSFactory returns an object that implements user.IUserDataSource.
+func AclDSFactory(acl ds.IDataSource) (ds.IAclDataSource, error) {
 
-	dst := aclDataStore{}
+	dsrc := aclDataSource{}
 
 	t, ok := acl.(ITable)
 	if !ok {
-		return dst, new(NotITableError)
+		return dsrc, new(NotITableError)
 	}
 
 	// Verify user tags
 	if f, err := ds.TagValuesPivoted(t, "db", "json", []string{"role", "route", "method", "from", "to"}); err != nil {
 		err.Copy(msg.Get("2").SetArgs("ACL"))
-		return dst, err
+		return dsrc, err
 	} else {
-		dst.f = f
-		dst.t = t
+		dsrc.f = f
+		dsrc.t = t
 	}
 
-	return dst, nil
+	return dsrc, nil
 }
 
 // GetAcl exported
-func (dst aclDataStore) Fetch() (ds.Acl, error) {
+func (dsrc aclDataSource) Fetch() (ds.Acl, error) {
 
 	m := make(ds.Acl)
 
 	sb := sqlbuilder.NewSelectBuilder()
-	sb.From(dst.t.Name())
-	sb.Select(dst.f...)
+	sb.From(dsrc.t.Name())
+	sb.Select(dsrc.f...)
 	q, args := sb.Build()
 
 	rows, err := Db().Query(q, args...)

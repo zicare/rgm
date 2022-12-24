@@ -28,22 +28,22 @@ type InitOpts struct {
 	Verbose      *bool
 	Messages     []msg.Message
 	AclDSFactory ds.AclDSFactory
-	Acl          ds.IDataStore
+	Acl          ds.IDataSource
 }
 
 // Returns a gin.HandlersChain slice loaded with
 // mw.BasicAuthentication, mw.Abuse and h.
 // h is the actual controller function.
-func BHC(fn ds.UserDSFactory, u ds.IDataStore, crypto lib.ICrypto, h gin.HandlerFunc) gin.HandlersChain {
+func BHC(fn ds.UserDSFactory, u ds.IDataSource, crypto lib.ICrypto, h gin.HandlerFunc) gin.HandlersChain {
 
-	dst, err := fn(u)
+	dsrc, err := fn(u)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	handlersChain := gin.HandlersChain{}
-	handlersChain = append(handlersChain, mw.BasicAuthentication(dst, crypto))
+	handlersChain = append(handlersChain, mw.BasicAuthentication(dsrc, crypto))
 	handlersChain = append(handlersChain, mw.Abuse())
 	return append(handlersChain, h)
 }

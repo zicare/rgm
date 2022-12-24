@@ -11,19 +11,19 @@ import (
 	"github.com/zicare/rgm/lib"
 )
 
-// Fetch returns the qo.DataStore records that match qo settings.
+// Fetch returns the qo.DataSource records that match qo settings.
 // Supports BeforeSelect(qo) and parent data retrieval through dig params.
 // If a parent resource is not found, Fetch is aborted with a NotFoundError.
-// Beware that qo.DataStore must implement ITable.
+// Beware that qo.DataSource must implement ITable.
 func (Table) Fetch(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data []interface{}, err error) {
 
-	t, ok := qo.DataStore.(ITable)
+	t, ok := qo.DataSource.(ITable)
 	if !ok {
 		return meta, data, new(NotITableError)
 	}
 
-	s := sqlbuilder.NewStruct(qo.DataStore)
-	b := s.SelectFrom(qo.DataStore.Name())
+	s := sqlbuilder.NewStruct(qo.DataSource)
+	b := s.SelectFrom(qo.DataSource.Name())
 
 	// set before select constraints
 	if params, err := t.BeforeSelect(qo); err != nil {

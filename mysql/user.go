@@ -10,43 +10,43 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
-// MySQL implementation of user.IUserDataStore.
-type userDataStore struct {
+// MySQL implementation of user.IUserDataSource.
+type userDataSource struct {
 	t ITable
 	f []string
 }
 
-// UserDSFactory returns an object that implements user.IUserDataStore.
-func UserDSFactory(user ds.IDataStore) (ds.IUserDataStore, error) {
+// UserDSFactory returns an object that implements user.IUserDataSource.
+func UserDSFactory(user ds.IDataSource) (ds.IUserDataSource, error) {
 
-	dst := userDataStore{}
+	dsrc := userDataSource{}
 
 	t, ok := user.(ITable)
 	if !ok {
-		return dst, new(NotITableError)
+		return dsrc, new(NotITableError)
 	}
 
 	// Verify user tags
 	if f, err := ds.TagValuesPivoted(t, "db", "json", []string{"uid", "role", "tps", "usr", "pwd", "from", "to"}); err != nil {
 		err.Copy(msg.Get("2").SetArgs("User"))
-		return dst, err
+		return dsrc, err
 	} else {
-		dst.f = f
-		dst.t = t
+		dsrc.f = f
+		dsrc.t = t
 	}
 
-	return dst, nil
+	return dsrc, nil
 }
 
 // Get exported
-func (dst userDataStore) Get(username string) (ds.User, error) {
+func (dsrc userDataSource) Get(username string) (ds.User, error) {
 
-	u := ds.User{Type: dst.t.Name()}
+	u := ds.User{Type: dsrc.t.Name()}
 
 	b := sqlbuilder.NewSelectBuilder()
-	b.From(dst.t.Name())
-	b.Select(dst.f...)
-	b.Where(b.Equal(dst.f[3], username))
+	b.From(dsrc.t.Name())
+	b.Select(dsrc.f...)
+	b.Where(b.Equal(dsrc.f[3], username))
 	q, args := b.Build()
 
 	// execute query
@@ -67,12 +67,12 @@ func (dst userDataStore) Get(username string) (ds.User, error) {
 }
 
 // PatchPwd exported
-func (dst userDataStore) patchPwd(patch *ds.Patch) error {
+func (dsrc userDataSource) patchPwd(patch *ds.Patch) error {
 
 	b := sqlbuilder.NewUpdateBuilder()
-	b.Update(dst.t.Name())
-	b.Set(b.Assign(dst.f[4], lib.Crypto().Encode(patch.Password)))
-	b.Where(b.Equal(dst.f[3], patch.Email))
+	b.Update(dsrc.t.Name())
+	b.Set(b.Assign(dsrc.f[4], lib.Crypto().Encode(patch.Password)))
+	b.Where(b.Equal(dsrc.f[3], patch.Email))
 	q, args := b.Build()
 
 	if res, err := Db().Exec(q, args...); err != nil {

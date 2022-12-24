@@ -9,9 +9,9 @@ import (
 	"github.com/zicare/rgm/mail"
 )
 
-// IPinDataStore defines an interface to
+// IPinDataSource defines an interface to
 // post pins and patch passwords using a pin.
-type IPinDataStore interface {
+type IPinDataSource interface {
 
 	// Post Pin
 	Post(email string) (Pin, error)

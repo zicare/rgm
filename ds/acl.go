@@ -38,18 +38,18 @@ func (g Grant) Valid() bool {
 }
 
 // Defines an interface for ACL data access.
-type IAclDataStore interface {
+type IAclDataSource interface {
 
 	// Returns all grants mapped to its corresponding validity time range.
 	Fetch() (Acl, error)
 }
 
 // Meant to be executed on startup, Init loads the acl map in memory.
-func Init(fn AclDSFactory, d IDataStore) (err error) {
+func Init(fn AclDSFactory, d IDataSource) (err error) {
 
-	if dst, err := fn(d); err != nil {
+	if dsrc, err := fn(d); err != nil {
 		return err
-	} else if acl, err = dst.Fetch(); err != nil {
+	} else if acl, err = dsrc.Fetch(); err != nil {
 		return err
 	}
 

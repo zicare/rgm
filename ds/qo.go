@@ -26,7 +26,7 @@ const (
 // QueryOpts exported
 type QueryOptions struct {
 	User             User
-	DataStore        IDataStore
+	DataSource       IDataSource
 	Fields           []string
 	WritableFields   []string
 	WritableValues   []interface{}
@@ -60,16 +60,15 @@ func (qo *QueryOptions) SetLimit(limit *int) *QueryOptions {
 }
 */
 
-func (qo *QueryOptions) Copy(dst IDataStore, params Params) *QueryOptions {
+func (qo *QueryOptions) Copy(dsrc IDataSource, params Params) *QueryOptions {
 
 	cqo := new(QueryOptions)
 
 	cqo.Equal = make(map[ParamType]Params)
-	qo.Equal[Primary] = make(Params)
 
 	cqo.User = qo.User
-	cqo.DataStore = dst
-	_, cqo.Fields, _, _, _ = dsMeta(dst)
+	cqo.DataSource = dsrc
+	_, cqo.Fields, _, _, _ = dsMeta(dsrc)
 	cqo.Equal[Primary] = params
 	cqo.Dig = qo.Dig
 
@@ -77,7 +76,7 @@ func (qo *QueryOptions) Copy(dst IDataStore, params Params) *QueryOptions {
 }
 
 // QueryOptsFactory exported
-func QOFactory(c *gin.Context, d IDataStore) (*QueryOptions, *TagError) {
+func QOFactory(c *gin.Context, d IDataSource) (*QueryOptions, *TagError) {
 
 	qo := new(QueryOptions)
 
@@ -97,7 +96,7 @@ func QOFactory(c *gin.Context, d IDataStore) (*QueryOptions, *TagError) {
 	}
 
 	qo.setUser(c)
-	qo.DataStore = d
+	qo.DataSource = d
 	qo.Fields = flds
 	qo.WritableFields = wflds
 	qo.WritableValues = wvals

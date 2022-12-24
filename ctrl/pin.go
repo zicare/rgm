@@ -12,14 +12,14 @@ import (
 // PinController exported
 type PinController struct{}
 
-// Post saves a pin to PinDataStore and sends it back to requesting user by email.
-func (ctrl PinController) Post(c *gin.Context, fn ds.PinDSFactory, p ds.IDataStore, u ds.IDataStore) {
+// Post saves a pin to PinDataSource and sends it back to requesting user by email.
+func (ctrl PinController) Post(c *gin.Context, fn ds.PinDSFactory, p ds.IDataSource, u ds.IDataSource) {
 
 	d := &struct {
 		Email string `json:"usr" binding:"required,email"`
 	}{}
 
-	if dst, err := fn(p, u); err != nil {
+	if dsrc, err := fn(p, u); err != nil {
 
 		c.JSON(
 			http.StatusInternalServerError,
@@ -33,7 +33,7 @@ func (ctrl PinController) Post(c *gin.Context, fn ds.PinDSFactory, p ds.IDataSto
 			msg.ValidationErrors(err),
 		)
 
-	} else if p, err := dst.Post(d.Email); err != nil {
+	} else if p, err := dsrc.Post(d.Email); err != nil {
 
 		switch err.(type) {
 		case *ds.InvalidCredentials, *ds.ExpiredCredentials:
@@ -61,10 +61,10 @@ func (ctrl PinController) Post(c *gin.Context, fn ds.PinDSFactory, p ds.IDataSto
 
 }
 
-// Patch updates the password in IUserDataStore.
-func (ctrl PinController) Patch(c *gin.Context, fn ds.PinDSFactory, p ds.IDataStore, u ds.IDataStore) {
+// Patch updates the password in IUserDataSource.
+func (ctrl PinController) Patch(c *gin.Context, fn ds.PinDSFactory, p ds.IDataSource, u ds.IDataSource) {
 
-	dst, err := fn(p, u)
+	dsrc, err := fn(p, u)
 	if err != nil {
 		c.JSON(
 			http.StatusInternalServerError,
@@ -82,7 +82,7 @@ func (ctrl PinController) Patch(c *gin.Context, fn ds.PinDSFactory, p ds.IDataSt
 	}
 
 	patch := ds.PatchDecoder(pr)
-	if err := dst.PatchPwd(patch); err != nil {
+	if err := dsrc.PatchPwd(patch); err != nil {
 
 		ml := []msg.Message{}
 		switch err.(type) {

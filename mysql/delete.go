@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"github.com/go-sql-driver/mysql"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/zicare/rgm/ds"
 )
@@ -8,10 +9,10 @@ import (
 // Delete supports single and multiple records removal.
 // It first checks with Table's BeforeDelete method for extra constraints.
 // BeforeDelete can also return a *ds.NotAllowedError to abort Delete.
-// Beware that qo.DataStore must implement ITable.
+// Beware that qo.DataSource must implement ITable.
 func (Table) Delete(qo *ds.QueryOptions) (int64, error) {
 
-	t, ok := qo.DataStore.(ITable)
+	t, ok := qo.DataSource.(ITable)
 	if !ok {
 		return 0, new(NotITableError)
 	}
@@ -103,7 +104,11 @@ func (Table) Delete(qo *ds.QueryOptions) (int64, error) {
 	//return 0, nil
 
 	// Execute delete
-	if res, err := Db().Exec(q, args); err != nil {
+	if res, err := Db().Exec(q, args...); err != nil {
+		if me, ok := err.(*mysql.MySQLError); ok && me.Number == 1451 {
+			// Cannot delete or update a parent row
+			return 0, new(ds.ForeignKeyConstraint)
+		}
 		return 0, err
 	} else if rows, err := res.RowsAffected(); err != nil {
 		return 0, err

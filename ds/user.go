@@ -20,7 +20,7 @@ type User struct {
 
 // Defines an interface to retrieve user data
 // and modify password.
-type IUserDataStore interface {
+type IUserDataSource interface {
 
 	// Return the active User matching the username
 	Get(username string) (User, error)

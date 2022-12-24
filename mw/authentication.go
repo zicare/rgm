@@ -16,7 +16,7 @@ import (
 // If passed, a new key/value pair is stored in the request context.
 // key: "User"
 // value: ds.User
-func BasicAuthentication(dst ds.IUserDataStore, crypto lib.ICrypto) gin.HandlerFunc {
+func BasicAuthentication(dsrc ds.IUserDataSource, crypto lib.ICrypto) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
@@ -27,7 +27,7 @@ func BasicAuthentication(dst ds.IUserDataStore, crypto lib.ICrypto) gin.HandlerF
 				msg.Get("3"),
 			)
 
-		} else if u, err := dst.Get(username); err != nil {
+		} else if u, err := dsrc.Get(username); err != nil {
 
 			switch err.(type) {
 			case *ds.InvalidCredentials, *ds.ExpiredCredentials:

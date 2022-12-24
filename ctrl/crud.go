@@ -14,7 +14,7 @@ import (
 type CrudController struct{}
 
 // Find exported
-func (cc CrudController) Find(c *gin.Context, d ds.IDataStore) {
+func (cc CrudController) Find(c *gin.Context, d ds.IDataSource) {
 
 	if qo, err := ds.QOFactory(c, d); err != nil {
 
@@ -59,7 +59,7 @@ func (cc CrudController) Find(c *gin.Context, d ds.IDataStore) {
 }
 
 // Fetch exported
-func (cc CrudController) Fetch(c *gin.Context, d ds.IDataStore) {
+func (cc CrudController) Fetch(c *gin.Context, d ds.IDataSource) {
 
 	if qo, err := ds.QOFactory(c, d); err != nil {
 
@@ -103,23 +103,23 @@ func (cc CrudController) Fetch(c *gin.Context, d ds.IDataStore) {
 }
 
 // Post exported
-func (cc CrudController) Post(c *gin.Context, dst ds.IDataStore) {
+func (cc CrudController) Post(c *gin.Context, dsrc ds.IDataSource) {
 
-	if qo, err := ds.QOFactory(c, dst); err != nil {
+	if qo, err := ds.QOFactory(c, dsrc); err != nil {
 
 		c.JSON(
 			http.StatusInternalServerError,
 			msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
 		)
 
-	} else if err := c.ShouldBindJSON(dst); err != nil {
+	} else if err := c.ShouldBindJSON(dsrc); err != nil {
 
 		c.JSON(
 			http.StatusBadRequest,
 			msg.ValidationErrors(err),
 		)
 
-	} else if err := dst.Insert(qo); err != nil {
+	} else if err := dsrc.Insert(qo); err != nil {
 
 		switch err.(type) {
 		case *ds.NotAllowedError:
@@ -144,29 +144,34 @@ func (cc CrudController) Post(c *gin.Context, dst ds.IDataStore) {
 
 		c.JSON(
 			http.StatusCreated,
-			dst,
+			dsrc,
 		)
 
 	}
 }
 
 // Delete exported
-func (cc CrudController) Delete(c *gin.Context, dst ds.IDataStore) {
+func (cc CrudController) Delete(c *gin.Context, dsrc ds.IDataSource) {
 
-	if qo, err := ds.QOFactory(c, dst); err != nil {
+	if qo, err := ds.QOFactory(c, dsrc); err != nil {
 
 		c.JSON(
 			http.StatusInternalServerError,
 			msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
 		)
 
-	} else if r, err := dst.Delete(qo); err != nil {
+	} else if r, err := dsrc.Delete(qo); err != nil {
 
 		switch err.(type) {
 		case *ds.NotAllowedError:
 			c.JSON(
 				http.StatusUnauthorized,
 				msg.Get("11"),
+			)
+		case *ds.ForeignKeyConstraint:
+			c.JSON(
+				http.StatusConflict,
+				msg.Get("40"),
 			)
 		default:
 			c.JSON(

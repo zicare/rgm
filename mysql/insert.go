@@ -8,7 +8,7 @@ import (
 //Insert exported
 func (Table) Insert(qo *ds.QueryOptions) error {
 
-	t, ok := qo.DataStore.(ITable)
+	t, ok := qo.DataSource.(ITable)
 	if !ok {
 		return new(NotITableError)
 	}

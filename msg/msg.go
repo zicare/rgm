@@ -83,5 +83,6 @@ func _init() {
 	msg["37"] = New("37", "Updated!")
 	msg["38"] = New("38", "Patched!")
 	msg["39"] = New("39", "Expired PIN")
+	msg["40"] = New("40", "Can't delete a parent resource, remove children and retry.")
 	//msg["29"] = New("33", "CORS tags are not properly set")
 }

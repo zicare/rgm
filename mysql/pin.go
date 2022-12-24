@@ -12,42 +12,42 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
-// MySQL implementation of pin.IPinDataStore.
-type pinDataStore struct {
+// MySQL implementation of pin.IPinDataSource.
+type pinDataSource struct {
 	t ITable
 	f []string
-	u ds.IUserDataStore
+	u ds.IUserDataSource
 }
 
-// PinDSFactory returns an object that implements pin.IPinDataStore.
-func PinDSFactory(pin, user ds.IDataStore) (ds.IPinDataStore, error) {
+// PinDSFactory returns an object that implements pin.IPinDataSource.
+func PinDSFactory(pin, user ds.IDataSource) (ds.IPinDataSource, error) {
 
-	pdst := pinDataStore{}
+	pdsrc := pinDataSource{}
 
 	t, ok := pin.(ITable)
 	if !ok {
-		return pdst, new(NotITableError)
-	} else if udst, err := UserDSFactory(user); err != nil {
-		return pdst, err
+		return pdsrc, new(NotITableError)
+	} else if udsrc, err := UserDSFactory(user); err != nil {
+		return pdsrc, err
 	} else {
-		pdst.u = udst
+		pdsrc.u = udsrc
 	}
 
 	// Get pin fields
 	if f, err := ds.TagValuesPivoted(t, "db", "json", []string{"email", "code", "created", "expiration"}); err != nil {
 		err.Copy(msg.Get("2").SetArgs("Pin"))
-		return pdst, err
+		return pdsrc, err
 	} else {
-		pdst.f = f
-		pdst.t = t
+		pdsrc.f = f
+		pdsrc.t = t
 	}
 
-	return pdst, nil
+	return pdsrc, nil
 }
 
 // Post saves a new pin to p.t.
 // email param must match an active user record in p.u.
-func (p pinDataStore) Post(email string) (ps ds.Pin, err error) {
+func (p pinDataSource) Post(email string) (ps ds.Pin, err error) {
 
 	// validate email
 	if _, err := p.u.Get(email); err != nil {
@@ -83,7 +83,7 @@ func (p pinDataStore) Post(email string) (ps ds.Pin, err error) {
 // PatchPwd updates password in p.u.
 // patch.Email must match an active user record in p.u.
 // patch.Email, patch.Pin must match an active pin record in p.
-func (p pinDataStore) PatchPwd(patch *ds.Patch) error {
+func (p pinDataSource) PatchPwd(patch *ds.Patch) error {
 
 	if _, err := p.u.Get(patch.Email); err != nil {
 		// *user.InvalidCredentials, *user.ExpiredCredentials
@@ -91,13 +91,13 @@ func (p pinDataStore) PatchPwd(patch *ds.Patch) error {
 	} else if _, err := p.get(patch.Email, patch.Pin); err != nil {
 		// *pin.InvalidPinError, *pin.ExpiredPinError
 		return err
-	} else if err := p.u.(userDataStore).patchPwd(patch); err != nil {
+	} else if err := p.u.(userDataSource).patchPwd(patch); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (p pinDataStore) get(email, code string) (ds.Pin, error) {
+func (p pinDataSource) get(email, code string) (ds.Pin, error) {
 
 	ps := ds.Pin{}
 
