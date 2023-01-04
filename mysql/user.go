@@ -67,11 +67,11 @@ func (dsrc userDataSource) Get(username string) (ds.User, error) {
 }
 
 // PatchPwd exported
-func (dsrc userDataSource) patchPwd(patch *ds.Patch) error {
+func (dsrc userDataSource) patchPwd(patch *ds.Patch, crypto lib.ICrypto) error {
 
 	b := sqlbuilder.NewUpdateBuilder()
 	b.Update(dsrc.t.Name())
-	b.Set(b.Assign(dsrc.f[4], lib.Crypto().Encode(patch.Password)))
+	b.Set(b.Assign(dsrc.f[4], crypto.Encode(patch.Password)))
 	b.Where(b.Equal(dsrc.f[3], patch.Email))
 	q, args := b.Build()
 

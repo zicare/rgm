@@ -83,7 +83,7 @@ func (p pinDataSource) Post(email string) (ps ds.Pin, err error) {
 // PatchPwd updates password in p.u.
 // patch.Email must match an active user record in p.u.
 // patch.Email, patch.Pin must match an active pin record in p.
-func (p pinDataSource) PatchPwd(patch *ds.Patch) error {
+func (p pinDataSource) PatchPwd(patch *ds.Patch, crypto lib.ICrypto) error {
 
 	if _, err := p.u.Get(patch.Email); err != nil {
 		// *user.InvalidCredentials, *user.ExpiredCredentials
@@ -91,7 +91,7 @@ func (p pinDataSource) PatchPwd(patch *ds.Patch) error {
 	} else if _, err := p.get(patch.Email, patch.Pin); err != nil {
 		// *pin.InvalidPinError, *pin.ExpiredPinError
 		return err
-	} else if err := p.u.(userDataSource).patchPwd(patch); err != nil {
+	} else if err := p.u.(userDataSource).patchPwd(patch, crypto); err != nil {
 		return err
 	}
 	return nil

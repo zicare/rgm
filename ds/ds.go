@@ -12,11 +12,15 @@ type IDataSource interface {
 	// i.e. For a db store this is the table name
 	Name() string
 
+	Count(qo *QueryOptions) (int64, error)
+
 	Find(qo *QueryOptions) (ResultSetMeta, interface{}, error)
 
 	Fetch(qo *QueryOptions) (ResultSetMeta, []interface{}, error)
 
 	Insert(qo *QueryOptions) error
+
+	Update(qo *QueryOptions) (int64, error)
 
 	Delete(qo *QueryOptions) (int64, error)
 }

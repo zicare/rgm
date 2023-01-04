@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zicare/rgm/ds"
+	"github.com/zicare/rgm/lib"
 	"github.com/zicare/rgm/msg"
 )
 
@@ -62,7 +63,7 @@ func (ctrl PinController) Post(c *gin.Context, fn ds.PinDSFactory, p ds.IDataSou
 }
 
 // Patch updates the password in IUserDataSource.
-func (ctrl PinController) Patch(c *gin.Context, fn ds.PinDSFactory, p ds.IDataSource, u ds.IDataSource) {
+func (ctrl PinController) Patch(c *gin.Context, fn ds.PinDSFactory, p ds.IDataSource, u ds.IDataSource, crypto lib.ICrypto) {
 
 	dsrc, err := fn(p, u)
 	if err != nil {
@@ -82,7 +83,7 @@ func (ctrl PinController) Patch(c *gin.Context, fn ds.PinDSFactory, p ds.IDataSo
 	}
 
 	patch := ds.PatchDecoder(pr)
-	if err := dsrc.PatchPwd(patch); err != nil {
+	if err := dsrc.PatchPwd(patch, crypto); err != nil {
 
 		ml := []msg.Message{}
 		switch err.(type) {

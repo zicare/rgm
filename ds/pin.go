@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/zicare/rgm/config"
+	"github.com/zicare/rgm/lib"
 	"github.com/zicare/rgm/mail"
 )
 
@@ -17,7 +18,7 @@ type IPinDataSource interface {
 	Post(email string) (Pin, error)
 
 	// Patch password
-	PatchPwd(patch *Patch) error
+	PatchPwd(patch *Patch, crypto lib.ICrypto) error
 }
 
 type Pin struct {

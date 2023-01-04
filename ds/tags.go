@@ -4,16 +4,17 @@ import (
 	"reflect"
 )
 
-func dsMeta(d IDataSource) (k, f, w []string, v []interface{}, e *TagError) {
+func Meta(d IDataSource) (k, f, w []string, v []interface{}, e *TagError) {
 
-	r := reflect.ValueOf(d).Elem()
+	//r := reflect.ValueOf(d).Elem()
+	r := reflect.Indirect(reflect.ValueOf(d))
 	for i := 0; i < r.NumField(); i++ {
 		if db, ok := r.Type().Field(i).Tag.Lookup("db"); ok && db != "-" {
 			f = append(f, db)
 			if pk, ok := r.Type().Field(i).Tag.Lookup("pk"); ok && pk == "1" {
 				k = append(k, db)
 			}
-			if vw, ok := r.Type().Field(i).Tag.Lookup("view"); !ok && vw == "1" {
+			if _, ok := r.Type().Field(i).Tag.Lookup("view"); !ok {
 				w = append(w, db)
 				v = append(v, r.Field(i).Interface())
 			}

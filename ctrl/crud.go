@@ -103,23 +103,23 @@ func (cc CrudController) Fetch(c *gin.Context, d ds.IDataSource) {
 }
 
 // Post exported
-func (cc CrudController) Post(c *gin.Context, dsrc ds.IDataSource) {
+func (cc CrudController) Post(c *gin.Context, d ds.IDataSource) {
 
-	if qo, err := ds.QOFactory(c, dsrc); err != nil {
-
-		c.JSON(
-			http.StatusInternalServerError,
-			msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
-		)
-
-	} else if err := c.ShouldBindJSON(dsrc); err != nil {
+	if err := c.ShouldBindJSON(d); err != nil {
 
 		c.JSON(
 			http.StatusBadRequest,
 			msg.ValidationErrors(err),
 		)
 
-	} else if err := dsrc.Insert(qo); err != nil {
+	} else if qo, err := ds.QOFactory(c, d); err != nil {
+
+		c.JSON(
+			http.StatusInternalServerError,
+			msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
+		)
+
+	} else if err := d.Insert(qo); err != nil {
 
 		switch err.(type) {
 		case *ds.NotAllowedError:
@@ -144,23 +144,72 @@ func (cc CrudController) Post(c *gin.Context, dsrc ds.IDataSource) {
 
 		c.JSON(
 			http.StatusCreated,
-			dsrc,
+			d,
 		)
 
 	}
 }
 
-// Delete exported
-func (cc CrudController) Delete(c *gin.Context, dsrc ds.IDataSource) {
+// Update exported
+func (cc CrudController) Update(c *gin.Context, d ds.IDataSource) {
 
-	if qo, err := ds.QOFactory(c, dsrc); err != nil {
+	if err := c.ShouldBindJSON(d); err != nil {
+
+		c.JSON(
+			http.StatusBadRequest,
+			msg.ValidationErrors(err),
+		)
+
+	} else if qo, err := ds.QOFactory(c, d); err != nil {
 
 		c.JSON(
 			http.StatusInternalServerError,
 			msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
 		)
 
-	} else if r, err := dsrc.Delete(qo); err != nil {
+	} else if rows, err := d.Update(qo); err != nil {
+
+		switch err.(type) {
+		case *ds.NotAllowedError:
+			c.JSON(
+				http.StatusUnauthorized,
+				msg.Get("11"),
+			)
+		case validator.ValidationErrors: //, *time.ParseError, *json.UnmarshalTypeError
+			// Payload didn't pass Table's BeforeUpdate validation.
+			c.JSON(
+				http.StatusBadRequest,
+				msg.ValidationErrors(err),
+			)
+		default:
+			c.JSON(
+				http.StatusInternalServerError,
+				msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
+			)
+		}
+
+	} else {
+
+		// resource updated
+		c.JSON(
+			http.StatusOK,
+			msg.Get("41").SetArgs(rows),
+		)
+
+	}
+}
+
+// Delete exported
+func (cc CrudController) Delete(c *gin.Context, d ds.IDataSource) {
+
+	if qo, err := ds.QOFactory(c, d); err != nil {
+
+		c.JSON(
+			http.StatusInternalServerError,
+			msg.Get("25").SetArgs(fmt.Sprintf("%T", err), err.Error()),
+		)
+
+	} else if r, err := d.Delete(qo); err != nil {
 
 		switch err.(type) {
 		case *ds.NotAllowedError:

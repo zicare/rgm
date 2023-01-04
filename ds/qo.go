@@ -1,6 +1,7 @@
 package ds
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -60,6 +61,17 @@ func (qo *QueryOptions) SetLimit(limit *int) *QueryOptions {
 }
 */
 
+func (qo *QueryOptions) Encode(f string, crypto lib.ICrypto) bool {
+
+	for k, v := range qo.WritableFields {
+		if v == f {
+			qo.WritableValues[k] = crypto.Encode(fmt.Sprint(qo.WritableValues[k]))
+			return true
+		}
+	}
+	return false
+}
+
 func (qo *QueryOptions) Copy(dsrc IDataSource, params Params) *QueryOptions {
 
 	cqo := new(QueryOptions)
@@ -68,7 +80,7 @@ func (qo *QueryOptions) Copy(dsrc IDataSource, params Params) *QueryOptions {
 
 	cqo.User = qo.User
 	cqo.DataSource = dsrc
-	_, cqo.Fields, _, _, _ = dsMeta(dsrc)
+	_, cqo.Fields, _, _, _ = Meta(dsrc)
 	cqo.Equal[Primary] = params
 	cqo.Dig = qo.Dig
 
@@ -80,7 +92,7 @@ func QOFactory(c *gin.Context, d IDataSource) (*QueryOptions, *TagError) {
 
 	qo := new(QueryOptions)
 
-	keys, flds, wflds, wvals, err := dsMeta(d)
+	keys, flds, wflds, wvals, err := Meta(d)
 	if err != nil {
 		return qo, err
 	}

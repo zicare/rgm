@@ -5,13 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 	"github.com/zicare/rgm/config"
 	"github.com/zicare/rgm/ds"
 	"github.com/zicare/rgm/jwt"
@@ -20,6 +16,7 @@ import (
 	"github.com/zicare/rgm/mw"
 	"github.com/zicare/rgm/mysql"
 	"github.com/zicare/rgm/tps"
+	"github.com/zicare/rgm/validation"
 )
 
 type InitOpts struct {
@@ -128,19 +125,8 @@ func Init(opts InitOpts) error {
 		fmt.Println("Agent enabled..." + strconv.FormatBool(!*opts.DisableAgent))
 	}
 
-	// Validation setup
-	// This is a workaround for FieldError.Field() bug
-	// in validation v10, that returns the actual struct field name
-	// instead of the json name, which is needed for custom error messages.
-	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
-			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
-			if name == "-" {
-				return ""
-			}
-			return name
-		})
-	}
+	//  Custom validation
+	validation.Init()
 
 	return nil
 }
