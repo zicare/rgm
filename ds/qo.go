@@ -1,7 +1,6 @@
 package ds
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -30,7 +29,6 @@ type QueryOptions struct {
 	DataSource       IDataSource
 	Fields           []string
 	WritableFields   []string
-	WritableValues   []interface{}
 	Checksum         int
 	Dig              []string
 	Equal            map[ParamType]Params
@@ -61,17 +59,6 @@ func (qo *QueryOptions) SetLimit(limit *int) *QueryOptions {
 }
 */
 
-func (qo *QueryOptions) Encode(f string, crypto lib.ICrypto) bool {
-
-	for k, v := range qo.WritableFields {
-		if v == f {
-			qo.WritableValues[k] = crypto.Encode(fmt.Sprint(qo.WritableValues[k]))
-			return true
-		}
-	}
-	return false
-}
-
 func (qo *QueryOptions) Copy(dsrc IDataSource, params Params) *QueryOptions {
 
 	cqo := new(QueryOptions)
@@ -80,7 +67,7 @@ func (qo *QueryOptions) Copy(dsrc IDataSource, params Params) *QueryOptions {
 
 	cqo.User = qo.User
 	cqo.DataSource = dsrc
-	_, cqo.Fields, _, _, _ = Meta(dsrc)
+	_, cqo.Fields, _, _ = Meta(dsrc)
 	cqo.Equal[Primary] = params
 	cqo.Dig = qo.Dig
 
@@ -92,7 +79,7 @@ func QOFactory(c *gin.Context, d IDataSource) (*QueryOptions, *TagError) {
 
 	qo := new(QueryOptions)
 
-	keys, flds, wflds, wvals, err := Meta(d)
+	keys, flds, wflds, err := Meta(d)
 	if err != nil {
 		return qo, err
 	}
@@ -111,7 +98,6 @@ func QOFactory(c *gin.Context, d IDataSource) (*QueryOptions, *TagError) {
 	qo.DataSource = d
 	qo.Fields = flds
 	qo.WritableFields = wflds
-	qo.WritableValues = wvals
 	qo.setChecksum(qpar)
 	qo.setDig(qpar)
 

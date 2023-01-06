@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"github.com/go-sql-driver/mysql"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/zicare/rgm/ds"
 )
@@ -21,8 +22,9 @@ func (Table) Update(qo *ds.QueryOptions) (int64, error) {
 	b.Update(t.Name())
 
 	assignments := []string{}
-	for k, f := range qo.WritableFields {
-		assignments = append(assignments, b.Assign(f, qo.WritableValues[k]))
+	fv := ds.Values(qo.DataSource)
+	for _, f := range qo.WritableFields {
+		assignments = append(assignments, b.Assign(f, fv[f]))
 	}
 	b.Set(assignments...)
 
@@ -96,7 +98,14 @@ func (Table) Update(qo *ds.QueryOptions) (int64, error) {
 
 	q, args := b.Build()
 
+	//fmt.Println(q, args)
+	//return 0, new(ds.NotAllowedError)
+
 	if res, err := Db().Exec(q, args...); err != nil {
+		if me, ok := err.(*mysql.MySQLError); ok && me.Number == 1452 {
+			// Cannot add or update a child row
+			return 0, new(ds.ForeignKeyConstraint)
+		}
 		return 0, err
 	} else if rows, err := res.RowsAffected(); err != nil {
 		return 0, err

@@ -79,7 +79,7 @@ type ITable interface {
 // Table offers default implementation for all ITable and ds.IDataSource
 // methods, except Name().
 // Consider annonymous embedding of Table in your concrete ITable.
-type Table struct{} // Dig exported
+type Table struct{}
 
 func (Table) Dig(f ...string) []Dig {
 

@@ -133,6 +133,11 @@ func (cc CrudController) Post(c *gin.Context, d ds.IDataSource) {
 				http.StatusBadRequest,
 				msg.ValidationErrors(err),
 			)
+		case *ds.ForeignKeyConstraint:
+			c.JSON(
+				http.StatusConflict,
+				msg.Get("43"),
+			)
 		default:
 			c.JSON(
 				http.StatusInternalServerError,
@@ -180,6 +185,11 @@ func (cc CrudController) Update(c *gin.Context, d ds.IDataSource) {
 			c.JSON(
 				http.StatusBadRequest,
 				msg.ValidationErrors(err),
+			)
+		case *ds.ForeignKeyConstraint:
+			c.JSON(
+				http.StatusConflict,
+				msg.Get("42"),
 			)
 		default:
 			c.JSON(

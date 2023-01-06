@@ -4,7 +4,7 @@ import (
 	"reflect"
 )
 
-func Meta(d IDataSource) (k, f, w []string, v []interface{}, e *TagError) {
+func Meta(d IDataSource) (k, f, w []string, e *TagError) {
 
 	//r := reflect.ValueOf(d).Elem()
 	r := reflect.Indirect(reflect.ValueOf(d))
@@ -16,16 +16,30 @@ func Meta(d IDataSource) (k, f, w []string, v []interface{}, e *TagError) {
 			}
 			if _, ok := r.Type().Field(i).Tag.Lookup("view"); !ok {
 				w = append(w, db)
-				v = append(v, r.Field(i).Interface())
 			}
 		}
 	}
 
 	if len(k) == 0 {
-		return k, f, w, v, new(TagError)
+		return k, f, w, new(TagError)
 	}
 
-	return k, f, w, v, nil
+	return k, f, w, nil
+}
+
+func Values(d IDataSource) map[string]interface{} {
+
+	v := make(map[string]interface{})
+	r := reflect.Indirect(reflect.ValueOf(d))
+	for i := 0; i < r.NumField(); i++ {
+		if db, ok := r.Type().Field(i).Tag.Lookup("db"); ok && db != "-" {
+			if _, ok := r.Type().Field(i).Tag.Lookup("view"); !ok {
+				v[db] = r.Field(i).Interface()
+			}
+		}
+	}
+
+	return v
 }
 
 /*
