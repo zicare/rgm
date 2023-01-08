@@ -128,8 +128,8 @@ func (Table) Fetch(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data []interface
 			return meta, data, err
 		}
 
-		// dig... get parent data
-		if err := dig(qo); err != nil {
+		// run after select
+		if err := t.AfterSelect(qo); err != nil {
 			return meta, data, err
 		}
 

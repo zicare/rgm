@@ -11,7 +11,7 @@ import (
 )
 
 // Find returns the qo.DataSource record that matches qo settings.
-// Supports BeforeSelect(qo) and parent data retrieval through dig params.
+// Supports BeforeSelect(qo) and AfterSelect(qo). AfterSelect allows parent data retrieval through dig params.
 // If a parent resource is not found, Find is aborted with a NotFoundError.
 // Beware that qo.DataSource must implement ITable.
 func (Table) Find(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data interface{}, err error) {
@@ -51,8 +51,8 @@ func (Table) Find(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data interface{},
 		return meta, data, new(ds.NotFoundError)
 	}
 
-	// dig...  get parent data
-	if err := dig(qo); err != nil { // dig err type is same as Find
+	// run after select
+	if err := t.AfterSelect(qo); err != nil {
 		return meta, data, err
 	}
 
