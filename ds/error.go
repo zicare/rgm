@@ -7,6 +7,11 @@ type TagError struct {
 	msg.Message
 }
 
+// DuplicatedEntry exported
+type DuplicatedEntry struct {
+	msg.Message
+}
+
 // ForeignKeyConstraint exported
 type ForeignKeyConstraint struct {
 	msg.Message

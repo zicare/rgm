@@ -133,10 +133,15 @@ func (cc CrudController) Post(c *gin.Context, d ds.IDataSource) {
 				http.StatusBadRequest,
 				msg.ValidationErrors(err),
 			)
-		case *ds.ForeignKeyConstraint:
+		case *ds.DuplicatedEntry:
 			c.JSON(
 				http.StatusConflict,
 				msg.Get("43"),
+			)
+		case *ds.ForeignKeyConstraint:
+			c.JSON(
+				http.StatusConflict,
+				msg.Get("42"),
 			)
 		default:
 			c.JSON(

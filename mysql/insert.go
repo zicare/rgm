@@ -38,6 +38,9 @@ func (Table) Insert(qo *ds.QueryOptions) error {
 	if err := Db().QueryRow(q+" RETURNING *", args...).Scan(s.AddrWithCols(qo.Fields, &t)...); err != nil {
 		if me, ok := err.(*mysql.MySQLError); ok && me.Number == 1062 {
 			// Duplicated entry
+			return new(ds.DuplicatedEntry)
+		} else if ok && me.Number == 1452 {
+			// Cannot add or update a child row
 			return new(ds.ForeignKeyConstraint)
 		}
 
