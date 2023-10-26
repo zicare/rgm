@@ -1,44 +1,23 @@
 package mysql
 
 import (
-	"github.com/go-sql-driver/mysql"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/zicare/rgm/ds"
 )
 
-//Update exported
-func (Table) Update(qo *ds.QueryOptions) (int64, error) {
+// Count returns the number of qo.DataSource records that match qo settings.
+// Beware that qo.DataSource must implement ds.IDataSource.
+func (Table) Count(qo *ds.QueryOptions) (count int64, err error) {
 
-	t, ok := qo.DataSource.(ITable)
-	if !ok {
-		return 0, new(NotITableError)
-	}
-
-	if err := t.BeforeUpdate(qo); err != nil {
-		return 0, err
-	}
-
-	b := sqlbuilder.MySQL.NewUpdateBuilder()
-	b.Update(t.Name())
-
-	assignments := []string{}
-	fv := ds.Values(qo.DataSource)
-	for _, f := range qo.WritableFields {
-		assignments = append(assignments, b.Assign(f, fv[f]))
-	}
-	b.Set(assignments...)
-
-	// set where Equal for Primary param
-	for k, v := range qo.Equal[ds.Primary] {
-		b.Where(b.Equal(k, v))
-	}
+	s := sqlbuilder.NewStruct(qo.DataSource)
+	b := s.SelectFrom(qo.DataSource.Name())
 
 	// set where Equal for Url param
 	for k, v := range qo.Equal[ds.Url] {
 		b.Where(b.Equal(k, v))
 	}
 
-	// set where EqualQPar
+	// set where Equal for Query param
 	for k, v := range qo.Equal[ds.Qry] {
 		b.Where(b.Equal(k, v))
 	}
@@ -88,29 +67,15 @@ func (Table) Update(qo *ds.QueryOptions) (int64, error) {
 		b.Where(b.LessEqualThan(k, v))
 	}
 
-	// set order by
-	b.OrderBy(qo.Order...)
-
-	// set limit
-	if qo.Limit != nil {
-		b.Limit(*qo.Limit)
-	}
+	// get total count
+	b.Select(b.As("COUNT(*)", "t"))
 
 	q, args := b.Build()
 
-	//fmt.Println(q, args)
-	//return 0, new(ds.NotAllowedError)
-
-	if res, err := Db().Exec(q, args...); err != nil {
-		if me, ok := err.(*mysql.MySQLError); ok && me.Number == 1452 {
-			// Cannot add or update a child row
-			return 0, new(ds.ForeignKeyConstraint)
-		}
+	if err := Db().QueryRow(q, args...).Scan(&count); err != nil {
 		return 0, err
-	} else if rows, err := res.RowsAffected(); err != nil {
-		return 0, err
-	} else {
-		return rows, nil
 	}
+
+	return count, nil
 
 }

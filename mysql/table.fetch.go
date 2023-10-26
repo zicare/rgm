@@ -14,12 +14,12 @@ import (
 // Fetch returns the qo.DataSource records that match qo settings.
 // Supports BeforeSelect(qo) and parent data retrieval through dig params.
 // If a parent resource is not found, Fetch is aborted with a NotFoundError.
-// Beware that qo.DataSource must implement ITable.
+// Beware that qo.DataSource must implement ds.IDataSource.
 func (Table) Fetch(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data []interface{}, err error) {
 
-	t, ok := qo.DataSource.(ITable)
+	t, ok := qo.DataSource.(ds.IDataSource)
 	if !ok {
-		return meta, data, new(NotITableError)
+		return meta, data, new(ds.NotIDataSourceError)
 	}
 
 	s := sqlbuilder.NewStruct(qo.DataSource)

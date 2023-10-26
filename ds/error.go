@@ -6,6 +6,11 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
+// NotIDataSourceError exported
+type NotIDataSourceError struct {
+	msg.Message
+}
+
 // TagError exported
 type ValidationErrors msg.MessageList
 
@@ -58,5 +63,15 @@ type InvalidPinError struct {
 
 // ExpiredPIN exported
 type ExpiredPinError struct {
+	msg.Message
+}
+
+// InsertError exported
+type InsertError struct {
+	msg.Message
+}
+
+// UpdateError exported
+type UpdateError struct {
 	msg.Message
 }

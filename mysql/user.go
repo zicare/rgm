@@ -12,7 +12,7 @@ import (
 
 // MySQL implementation of user.IUserDataSource.
 type userDataSource struct {
-	t ITable
+	t ds.IDataSource
 	f []string
 }
 
@@ -21,9 +21,9 @@ func UserDSFactory(user ds.IDataSource) (ds.IUserDataSource, error) {
 
 	dsrc := userDataSource{}
 
-	t, ok := user.(ITable)
+	t, ok := user.(ds.IDataSource)
 	if !ok {
-		return dsrc, new(NotITableError)
+		return dsrc, new(ds.NotIDataSourceError)
 	}
 
 	// Verify user tags
@@ -80,7 +80,7 @@ func (dsrc userDataSource) patchPwd(patch *ds.Patch, crypto lib.ICrypto) error {
 	} else if rows, err := res.RowsAffected(); err != nil {
 		return err
 	} else if rows != 1 {
-		return new(UpdateError)
+		return new(ds.UpdateError)
 	}
 
 	return nil

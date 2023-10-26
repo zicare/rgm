@@ -9,12 +9,12 @@ import (
 // Delete supports single and multiple records removal.
 // It first checks with Table's BeforeDelete method for extra constraints.
 // BeforeDelete can also return a *ds.NotAllowedError to abort Delete.
-// Beware that qo.DataSource must implement ITable.
+// Beware that qo.DataSource must implement ds.IDataSource.
 func (Table) Delete(qo *ds.QueryOptions) (int64, error) {
 
-	t, ok := qo.DataSource.(ITable)
+	t, ok := qo.DataSource.(ds.IDataSource)
 	if !ok {
-		return 0, new(NotITableError)
+		return 0, new(ds.NotIDataSourceError)
 	}
 
 	b := sqlbuilder.DeleteFrom(t.Name())

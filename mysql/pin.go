@@ -14,7 +14,7 @@ import (
 
 // MySQL implementation of pin.IPinDataSource.
 type pinDataSource struct {
-	t ITable
+	t ds.IDataSource
 	f []string
 	u ds.IUserDataSource
 }
@@ -24,9 +24,9 @@ func PinDSFactory(pin, user ds.IDataSource) (ds.IPinDataSource, error) {
 
 	pdsrc := pinDataSource{}
 
-	t, ok := pin.(ITable)
+	t, ok := pin.(ds.IDataSource)
 	if !ok {
-		return pdsrc, new(NotITableError)
+		return pdsrc, new(ds.NotIDataSourceError)
 	} else if udsrc, err := UserDSFactory(user); err != nil {
 		return pdsrc, err
 	} else {
@@ -71,9 +71,9 @@ func (p pinDataSource) Post(email string) (ps ds.Pin, err error) {
 	if res, err := Db().Exec(q, args...); err != nil {
 		return ps, err
 	} else if rows, err := res.RowsAffected(); err != nil {
-		return ps, new(InsertError)
+		return ps, new(ds.InsertError)
 	} else if rows != 1 {
-		return ps, new(InsertError)
+		return ps, new(ds.InsertError)
 	}
 
 	return ps, nil

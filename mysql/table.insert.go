@@ -9,9 +9,9 @@ import (
 //Insert exported
 func (Table) Insert(qo *ds.QueryOptions) error {
 
-	t, ok := qo.DataSource.(ITable)
+	t, ok := qo.DataSource.(ds.IDataSource)
 	if !ok {
-		return new(NotITableError)
+		return new(ds.NotIDataSourceError)
 	}
 
 	if err := t.BeforeInsert(qo); err != nil {
