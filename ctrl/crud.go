@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/zicare/rgm/ds"
 	"github.com/zicare/rgm/msg"
 )
@@ -127,11 +126,11 @@ func (cc CrudController) Post(c *gin.Context, d ds.IDataSource) {
 				http.StatusUnauthorized,
 				msg.Get("11"),
 			)
-		case validator.ValidationErrors: //, *time.ParseError, *json.UnmarshalTypeError
-			// Payload didn't pass Table's BeforeInsert validation.
+		case *ds.ValidationErrors:
+			// Payload didn't pass Table's BeforeInsert validation
 			c.JSON(
 				http.StatusBadRequest,
-				msg.ValidationErrors(err),
+				err,
 			)
 		case *ds.DuplicatedEntry:
 			c.JSON(
@@ -185,11 +184,11 @@ func (cc CrudController) Update(c *gin.Context, d ds.IDataSource) {
 				http.StatusUnauthorized,
 				msg.Get("11"),
 			)
-		case validator.ValidationErrors: //, *time.ParseError, *json.UnmarshalTypeError
-			// Payload didn't pass Table's BeforeUpdate validation.
+		case *ds.ValidationErrors:
+			// Payload didn't pass Table's BeforeUpdate validation
 			c.JSON(
 				http.StatusBadRequest,
-				msg.ValidationErrors(err),
+				err,
 			)
 		case *ds.ForeignKeyConstraint:
 			c.JSON(

@@ -24,18 +24,18 @@ type ITable interface {
 	AfterSelect(qo *ds.QueryOptions) error
 
 	// BeforeInsert offers a chance to complete extra validations, alter values,
-	// or abort the insert by returning an error.
+	// or abort the insert by returning a *ds.ValidationErrors error.
 	// Consider using *ds.NotAllowedError and/or validator.validationErrors, these
 	// will be treated as such by ctrl.CrudController, others will be considered
 	// InternalServerError's.
-	BeforeInsert(qo *ds.QueryOptions) error
+	BeforeInsert(qo *ds.QueryOptions) *ds.ValidationErrors
 
 	// BeforeUpdate offers a chance to complete extra validations, alter values,
-	// or abort the update by returning an error.
+	// or abort the update by returning a *ds.ValidationErrors error.
 	// Consider using *ds.NotAllowedError and/or validator.validationErrors, these
 	// will be treated as such by ctrl.CrudController, others will be considered
 	// InternalServerError's.
-	BeforeUpdate(qo *ds.QueryOptions) error
+	BeforeUpdate(qo *ds.QueryOptions) *ds.ValidationErrors
 
 	// BeforeDelete offers a chance optionally set additional constraints
 	// in a per Table basis, or even abort the select by returning a *ds.NotAllowedError.
@@ -55,11 +55,11 @@ func (Table) AfterSelect(qo *ds.QueryOptions) error {
 	return nil
 }
 
-func (Table) BeforeInsert(qo *ds.QueryOptions) error {
+func (Table) BeforeInsert(qo *ds.QueryOptions) *ds.ValidationErrors {
 	return nil
 }
 
-func (Table) BeforeUpdate(qo *ds.QueryOptions) error {
+func (Table) BeforeUpdate(qo *ds.QueryOptions) *ds.ValidationErrors {
 	return nil
 }
 

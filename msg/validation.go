@@ -1,6 +1,8 @@
 package msg
 
-import "github.com/go-playground/validator/v10"
+import (
+	"github.com/go-playground/validator/v10"
+)
 
 // Return a validation errors list
 func ValidationErrors(err error) (ml MessageList) {

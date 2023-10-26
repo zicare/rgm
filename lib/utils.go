@@ -4,6 +4,21 @@ import (
 	"reflect"
 )
 
+// XOR exported
+func XOR(args ...interface{}) bool {
+
+	c := 0
+	for _, arg := range args {
+		if !reflect.ValueOf(arg).IsNil() {
+			c++
+		}
+	}
+	if c != 1 {
+		return false
+	}
+	return true
+}
+
 // Pointer-dereference any struct literal
 func DeRefPtr(v interface{}) interface{} {
 

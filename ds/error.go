@@ -1,6 +1,20 @@
 package ds
 
-import "github.com/zicare/rgm/msg"
+import (
+	"encoding/json"
+
+	"github.com/zicare/rgm/msg"
+)
+
+// TagError exported
+type ValidationErrors msg.MessageList
+
+//Error exported
+func (ve *ValidationErrors) Error() string {
+
+	jve, _ := json.Marshal(ve)
+	return string(jve)
+}
 
 // TagError exported
 type TagError struct {
