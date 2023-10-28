@@ -1,9 +1,12 @@
 package mysql
 
 import (
+	"strings"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/zicare/rgm/ds"
+	"github.com/zicare/rgm/msg"
 )
 
 //Update exported
@@ -102,13 +105,26 @@ func (Table) Update(qo *ds.QueryOptions) (int64, error) {
 	//return 0, new(ds.NotAllowedError)
 
 	if res, err := Db().Exec(q, args...); err != nil {
-		if me, ok := err.(*mysql.MySQLError); ok && me.Number == 1452 {
-			// Cannot add or update a child row
-			return 0, new(ds.ForeignKeyConstraint)
+		if me, ok := err.(*mysql.MySQLError); ok {
+			switch me.Number {
+			case 1048:
+				// Column 'x' cannot be null
+				s := strings.Split(me.Message, "'")
+				e := ds.UpdateError{Message: msg.Get("24").SetField(s[1]).SetArgs("null", "required", "")}
+				return 0, &e
+			case 1451:
+				// 1451 - Cannot delete or update a parent row, can happen if trying to update value of the primary key column
+				return 0, new(ds.ForeignKeyConstraint)
+			case 1452:
+				// 1452 - Cannot add or update a child row
+				return 0, new(ds.ForeignKeyConstraint)
+			}
 		}
 		return 0, err
 	} else if rows, err := res.RowsAffected(); err != nil {
 		return 0, err
+	} else if rows == 0 {
+		return 0, new(ds.NotFoundError)
 	} else {
 		return rows, nil
 	}

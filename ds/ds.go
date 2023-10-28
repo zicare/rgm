@@ -5,7 +5,7 @@ type ResultSetMeta struct {
 	Checksum string
 }
 
-// Interface defines an interface for resource data access.
+// IDataSource defines an interface for resource data access.
 type IDataSource interface {
 
 	// Must return ds name.
@@ -33,17 +33,13 @@ type IDataSource interface {
 	AfterSelect(qo *QueryOptions) error
 
 	// BeforeInsert offers a chance to complete extra validations, alter values,
-	// or abort the insert by returning a *ds.ValidationErrors error.
-	// Consider using *ds.NotAllowedError and/or validator.validationErrors, these
-	// will be treated as such by ctrl.CrudController, others will be considered
-	// InternalServerError's.
+	// or abort the insert by returning a *ds.ValidationErrors error. These
+	// will be treated as such by ctrl.CrudController.
 	BeforeInsert(qo *QueryOptions) *ValidationErrors
 
 	// BeforeUpdate offers a chance to complete extra validations, alter values,
-	// or abort the update by returning a *ds.ValidationErrors error.
-	// Consider using *ds.NotAllowedError and/or validator.validationErrors, these
-	// will be treated as such by ctrl.CrudController, others will be considered
-	// InternalServerError's.
+	// or abort the update by returning a *ds.ValidationErrors error. These
+	// will be treated as such by ctrl.CrudController.
 	BeforeUpdate(qo *QueryOptions) *ValidationErrors
 
 	// BeforeDelete offers a chance optionally set additional constraints

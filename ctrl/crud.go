@@ -180,6 +180,7 @@ func (cc CrudController) Update(c *gin.Context, d ds.IDataSource) {
 
 		switch err.(type) {
 		case *ds.NotAllowedError:
+			// User not authorized
 			c.JSON(
 				http.StatusUnauthorized,
 				msg.Get("11"),
@@ -191,9 +192,22 @@ func (cc CrudController) Update(c *gin.Context, d ds.IDataSource) {
 				err,
 			)
 		case *ds.ForeignKeyConstraint:
+			// IDataSource found key constraints conflicts
 			c.JSON(
 				http.StatusConflict,
 				msg.Get("42"),
+			)
+		case *ds.NotFoundError:
+			// IDataSource can't find the resource
+			c.JSON(
+				http.StatusNotFound,
+				msg.Get("18"),
+			)
+		case *ds.UpdateError:
+			// IDataSource can't update the resource
+			c.JSON(
+				http.StatusBadRequest,
+				err,
 			)
 		default:
 			c.JSON(
