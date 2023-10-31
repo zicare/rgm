@@ -123,8 +123,6 @@ func (Table) Update(qo *ds.QueryOptions) (int64, error) {
 		return 0, err
 	} else if rows, err := res.RowsAffected(); err != nil {
 		return 0, err
-	} else if rows == 0 {
-		return 0, new(ds.NotFoundError)
 	} else {
 		return rows, nil
 	}
