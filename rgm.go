@@ -14,7 +14,6 @@ import (
 	"github.com/zicare/rgm/lib"
 	"github.com/zicare/rgm/msg"
 	"github.com/zicare/rgm/mw"
-	"github.com/zicare/rgm/mysql"
 	"github.com/zicare/rgm/tps"
 	"github.com/zicare/rgm/validation"
 )
@@ -95,21 +94,23 @@ func Init(opts InitOpts) error {
 		fmt.Println("MSG... OK")
 	}
 
-	// MySQL
-	if err := mysql.Init(); err != nil {
-		return err
-	} else if *opts.Verbose {
-		fmt.Println("MySQL... OK")
-	}
+	/*
+		// MySQL
+		if err := mysql.Init(); err != nil {
+			return err
+		} else if *opts.Verbose {
+			fmt.Println("MySQL... OK")
+		}
+	*/
 
-	// ACL
+	// Load ds.Acl map in memory
 	if err := ds.Init(opts.AclDSFactory, opts.Acl); err != nil {
 		return err
 	} else if *opts.Verbose {
 		fmt.Println("ACL... OK")
 	}
 
-	// Initialize revokedJWTMap
+	// Initialize jwt.revokedJWTMap
 	jwt.Init()
 	fmt.Println("JWT revokes... OK")
 

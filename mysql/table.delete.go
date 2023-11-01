@@ -9,18 +9,20 @@ import (
 // Delete supports single and multiple records removal.
 // It first checks with Table's BeforeDelete method for extra constraints.
 // BeforeDelete can also return a *ds.NotAllowedError to abort Delete.
-// Beware that qo.DataSource must implement ds.IDataSource.
+// Beware that qo.DataSource must implement ITable.
 func (Table) Delete(qo *ds.QueryOptions) (int64, error) {
 
-	t, ok := qo.DataSource.(ds.IDataSource)
+	t, ok := qo.DataSource.(ITable)
 	if !ok {
-		return 0, new(ds.NotIDataSourceError)
+		return 0, new(NotITableError)
 	}
 
 	b := sqlbuilder.DeleteFrom(t.Name())
 
+	tx, _ := Db().Begin()
+
 	// BeforeDelete check
-	if where, err := t.BeforeDelete(qo); err != nil {
+	if where, err := t.BeforeDelete(qo, tx); err != nil {
 		return 0, err
 	} else {
 		// set where scope
@@ -104,15 +106,21 @@ func (Table) Delete(qo *ds.QueryOptions) (int64, error) {
 	//return 0, nil
 
 	// Execute delete
-	if res, err := Db().Exec(q, args...); err != nil {
+	if res, err := tx.Exec(q, args...); err != nil {
+		tx.Rollback()
 		if me, ok := err.(*mysql.MySQLError); ok && me.Number == 1451 {
 			// Cannot delete or update a parent row
 			return 0, new(ds.ForeignKeyConstraint)
 		}
 		return 0, err
+	} else if err := t.AfterDelete(qo, tx); err != nil {
+		tx.Rollback()
+		return 0, err
 	} else if rows, err := res.RowsAffected(); err != nil {
+		tx.Commit()
 		return 0, err
 	} else {
+		tx.Commit()
 		return rows, nil
 	}
 }

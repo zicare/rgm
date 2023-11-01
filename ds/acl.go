@@ -45,6 +45,8 @@ type IAclDataSource interface {
 }
 
 // Meant to be executed on startup, Init loads the acl map in memory.
+// acl maps each grant to a time range.
+// Helps speed up Authorization middleware.
 func Init(fn AclDSFactory, d IDataSource) (err error) {
 
 	if dsrc, err := fn(d); err != nil {

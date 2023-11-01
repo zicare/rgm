@@ -9,12 +9,14 @@ import (
 //Insert exported
 func (Table) Insert(qo *ds.QueryOptions) error {
 
-	t, ok := qo.DataSource.(ds.IDataSource)
+	t, ok := qo.DataSource.(ITable)
 	if !ok {
-		return new(ds.NotIDataSourceError)
+		return new(NotITableError)
 	}
 
-	if err := t.BeforeInsert(qo); err != nil {
+	tx, _ := Db().Begin()
+
+	if err := t.BeforeInsert(qo, tx); err != nil {
 		return err
 	}
 
@@ -35,7 +37,8 @@ func (Table) Insert(qo *ds.QueryOptions) error {
 	//return new(ds.NotAllowedError)
 
 	s := sqlbuilder.NewStruct(t).For(sqlbuilder.MySQL)
-	if err := Db().QueryRow(q+" RETURNING *", args...).Scan(s.AddrWithCols(qo.Fields, &t)...); err != nil {
+	if err := tx.QueryRow(q+" RETURNING *", args...).Scan(s.AddrWithCols(qo.Fields, &t)...); err != nil {
+		tx.Rollback()
 		if me, ok := err.(*mysql.MySQLError); ok && me.Number == 1062 {
 			// Duplicated entry
 			return new(ds.DuplicatedEntry)
@@ -43,12 +46,15 @@ func (Table) Insert(qo *ds.QueryOptions) error {
 			// Cannot add or update a child row
 			return new(ds.ForeignKeyConstraint)
 		}
-
+		return err
+	} else if err := t.AfterInsert(qo, tx); err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	//return find(c, m, PID(m, fields.Primary), false)
 
+	tx.Commit()
 	return nil
 
 }

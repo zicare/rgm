@@ -12,12 +12,14 @@ import (
 //Update exported
 func (Table) Update(qo *ds.QueryOptions) (int64, error) {
 
-	t, ok := qo.DataSource.(ds.IDataSource)
+	t, ok := qo.DataSource.(ITable)
 	if !ok {
-		return 0, new(ds.NotIDataSourceError)
+		return 0, new(NotITableError)
 	}
 
-	if err := t.BeforeUpdate(qo); err != nil {
+	tx, _ := Db().Begin()
+
+	if err := t.BeforeUpdate(qo, tx); err != nil {
 		return 0, err
 	}
 
@@ -104,7 +106,8 @@ func (Table) Update(qo *ds.QueryOptions) (int64, error) {
 	//fmt.Println(q, args)
 	//return 0, new(ds.NotAllowedError)
 
-	if res, err := Db().Exec(q, args...); err != nil {
+	if res, err := tx.Exec(q, args...); err != nil {
+		tx.Rollback()
 		if me, ok := err.(*mysql.MySQLError); ok {
 			switch me.Number {
 			case 1048:
@@ -121,9 +124,14 @@ func (Table) Update(qo *ds.QueryOptions) (int64, error) {
 			}
 		}
 		return 0, err
+	} else if err := t.AfterUpdate(qo, tx); err != nil {
+		tx.Rollback()
+		return 0, err
 	} else if rows, err := res.RowsAffected(); err != nil {
+		tx.Commit()
 		return 0, err
 	} else {
+		tx.Commit()
 		return rows, nil
 	}
 

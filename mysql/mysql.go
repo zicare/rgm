@@ -3,6 +3,7 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	"github.com/zicare/rgm/config"
 
@@ -44,5 +45,11 @@ func Init() error {
 //Db returns the db handler
 func Db() *sql.DB {
 
+	if db != nil {
+		return db
+	} else if err := Init(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	return db
 }

@@ -14,7 +14,7 @@ import (
 
 // MySQL implementation of pin.IPinDataSource.
 type pinDataSource struct {
-	t ds.IDataSource
+	t ITable
 	f []string
 	u ds.IUserDataSource
 }
@@ -24,9 +24,9 @@ func PinDSFactory(pin, user ds.IDataSource) (ds.IPinDataSource, error) {
 
 	pdsrc := pinDataSource{}
 
-	t, ok := pin.(ds.IDataSource)
+	t, ok := pin.(ITable)
 	if !ok {
-		return pdsrc, new(ds.NotIDataSourceError)
+		return pdsrc, new(NotITableError)
 	} else if udsrc, err := UserDSFactory(user); err != nil {
 		return pdsrc, err
 	} else {

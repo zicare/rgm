@@ -6,11 +6,6 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
-// NotIDataSourceError exported
-type NotIDataSourceError struct {
-	msg.Message
-}
-
 // TagError exported
 type ValidationErrors msg.MessageList
 

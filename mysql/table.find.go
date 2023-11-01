@@ -13,12 +13,12 @@ import (
 // Find returns the qo.DataSource record that matches qo settings.
 // Supports BeforeSelect(qo) and AfterSelect(qo). AfterSelect allows parent data retrieval through dig params.
 // If a parent resource is not found, Find is aborted with a NotFoundError.
-// Beware that qo.DataSource must implement ds.IDataSource.
+// Beware that qo.DataSource must implement ITable.
 func (Table) Find(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data interface{}, err error) {
 
-	t, ok := qo.DataSource.(ds.IDataSource)
+	t, ok := qo.DataSource.(ITable)
 	if !ok {
-		return meta, data, new(ds.NotIDataSourceError)
+		return meta, data, new(NotITableError)
 	}
 
 	s := sqlbuilder.NewStruct(qo.DataSource)

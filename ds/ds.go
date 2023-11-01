@@ -23,28 +23,6 @@ type IDataSource interface {
 	Update(qo *QueryOptions) (int64, error)
 
 	Delete(qo *QueryOptions) (int64, error)
-
-	// BeforeSelect offers a chance optionally set additional constraints
-	// in a per Table basis, or abort the select by returning a *ds.NotAllowedError.
-	BeforeSelect(qo *QueryOptions) (Params, *NotAllowedError)
-
-	// AfterSelect offers a chance to optionally modify a selected result and attach parent
-	// table data in a per Table basis, or abort the select by returning an error.
-	AfterSelect(qo *QueryOptions) error
-
-	// BeforeInsert offers a chance to complete extra validations, alter values,
-	// or abort the insert by returning a *ds.ValidationErrors error. These
-	// will be treated as such by ctrl.CrudController.
-	BeforeInsert(qo *QueryOptions) *ValidationErrors
-
-	// BeforeUpdate offers a chance to complete extra validations, alter values,
-	// or abort the update by returning a *ds.ValidationErrors error. These
-	// will be treated as such by ctrl.CrudController.
-	BeforeUpdate(qo *QueryOptions) *ValidationErrors
-
-	// BeforeDelete offers a chance optionally set additional constraints
-	// in a per Table basis, or even abort the select by returning a *ds.NotAllowedError.
-	BeforeDelete(qo *QueryOptions) (Params, *NotAllowedError)
 }
 
 // UserDSFactory makes a IUserDataSource from a generic dsrc IDataSource.

@@ -12,7 +12,7 @@ import (
 
 // MySQL implementation of user.IUserDataSource.
 type userDataSource struct {
-	t ds.IDataSource
+	t ITable
 	f []string
 }
 
@@ -21,9 +21,9 @@ func UserDSFactory(user ds.IDataSource) (ds.IUserDataSource, error) {
 
 	dsrc := userDataSource{}
 
-	t, ok := user.(ds.IDataSource)
+	t, ok := user.(ITable)
 	if !ok {
-		return dsrc, new(ds.NotIDataSourceError)
+		return dsrc, new(NotITableError)
 	}
 
 	// Verify user tags

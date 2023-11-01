@@ -10,16 +10,14 @@ import (
 var revokedJWTMap map[string]map[string]time.Time
 
 // Initializes and cleans up the revokedJWTMap registry.
-// revokedJWTMap keys represent the users and the values
-// a revoke alert timestamp. Any JWT issued
-// before said timestamp will be reported as revoked
-// by IsRevoked.
+// revokeJWTMap negates the use of fresh JWTs issued before access revoke.
+// revokedJWTMap keys represent the users and the values a revoke alert timestamp.
+// Any JWT issued before said timestamp will be reported as revoked by IsRevoked.
 // Entries' lifetime is equal to the JWT lifetime,
 // this garantees that all JWT issued before the revoke alert
 // will be reported as revoked. Obsolete entries are deleted
 // automatically by the go-routine.
-// It is the responsability of the client app to add
-// the entries.
+// It is the responsability of the client app to add the entries.
 // JWT lifetime is set in the configuration files.
 func Init() {
 

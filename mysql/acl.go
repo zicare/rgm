@@ -8,7 +8,7 @@ import (
 
 // MySQL implementation of acl.IAclDataSource.
 type aclDataSource struct {
-	t ds.IDataSource
+	t ITable
 	f []string
 }
 
@@ -17,9 +17,9 @@ func AclDSFactory(acl ds.IDataSource) (ds.IAclDataSource, error) {
 
 	dsrc := aclDataSource{}
 
-	t, ok := acl.(ds.IDataSource)
+	t, ok := acl.(ITable)
 	if !ok {
-		return dsrc, new(ds.NotIDataSourceError)
+		return dsrc, new(NotITableError)
 	}
 
 	// Verify user tags

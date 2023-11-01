@@ -6,7 +6,7 @@ import (
 )
 
 // Count returns the number of qo.DataSource records that match qo settings.
-// Beware that qo.DataSource must implement ds.IDataSource.
+// Beware that qo.DataSource must implement ITable.
 func (Table) Count(qo *ds.QueryOptions) (count int64, err error) {
 
 	s := sqlbuilder.NewStruct(qo.DataSource)
