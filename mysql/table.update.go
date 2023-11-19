@@ -121,6 +121,9 @@ func (Table) Update(qo *ds.QueryOptions) (int64, error) {
 			case 1452:
 				// 1452 - Cannot add or update a child row
 				return 0, new(ds.ForeignKeyConstraint)
+			case 1003:
+				// Validation error
+				return 0, new(ds.ValidationError)
 			}
 		}
 		return 0, err

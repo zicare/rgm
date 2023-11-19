@@ -45,6 +45,9 @@ func (Table) Insert(qo *ds.QueryOptions) error {
 		} else if ok && me.Number == 1452 {
 			// Cannot add or update a child row
 			return new(ds.ForeignKeyConstraint)
+		} else if ok && me.Number == 1003 {
+			// Validation error
+			return new(ds.ValidationError)
 		}
 		return err
 	} else if err := t.AfterInsert(qo, tx); err != nil {

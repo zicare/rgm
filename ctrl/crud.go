@@ -132,6 +132,11 @@ func (cc CrudController) Post(c *gin.Context, d ds.IDataSource) {
 				http.StatusBadRequest,
 				err,
 			)
+		case *ds.ValidationError:
+			c.JSON(
+				http.StatusBadRequest,
+				msg.Get("19"),
+			)
 		case *ds.DuplicatedEntry:
 			c.JSON(
 				http.StatusConflict,
@@ -190,6 +195,11 @@ func (cc CrudController) Update(c *gin.Context, d ds.IDataSource) {
 			c.JSON(
 				http.StatusBadRequest,
 				err,
+			)
+		case *ds.ValidationError:
+			c.JSON(
+				http.StatusBadRequest,
+				msg.Get("19"),
 			)
 		case *ds.ForeignKeyConstraint:
 			// IDataSource found key constraints conflicts

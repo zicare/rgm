@@ -6,7 +6,7 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
-// TagError exported
+// ValidationErrors exported
 type ValidationErrors msg.MessageList
 
 //Error exported
@@ -14,6 +14,11 @@ func (ve *ValidationErrors) Error() string {
 
 	jve, _ := json.Marshal(ve)
 	return string(jve)
+}
+
+// ValidationError exported
+type ValidationError struct {
+	msg.Message
 }
 
 // TagError exported
