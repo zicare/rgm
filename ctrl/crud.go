@@ -260,6 +260,11 @@ func (cc CrudController) Delete(c *gin.Context, d ds.IDataSource) {
 				http.StatusConflict,
 				msg.Get("40"),
 			)
+		case *ds.ValidationError:
+			c.JSON(
+				http.StatusConflict,
+				msg.Get("19"),
+			)
 		default:
 			c.JSON(
 				http.StatusInternalServerError,

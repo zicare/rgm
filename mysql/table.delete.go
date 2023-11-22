@@ -111,6 +111,9 @@ func (Table) Delete(qo *ds.QueryOptions) (int64, error) {
 		if me, ok := err.(*mysql.MySQLError); ok && me.Number == 1451 {
 			// Cannot delete or update a parent row
 			return 0, new(ds.ForeignKeyConstraint)
+		} else if ok && me.Number == 1003 {
+			// Cannot deleted, didn't pass validation
+			return 0, new(ds.ValidationError)
 		}
 		return 0, err
 	} else if err := t.AfterDelete(qo, tx); err != nil {
