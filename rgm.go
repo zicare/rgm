@@ -104,7 +104,9 @@ func Init(opts InitOpts) error {
 	*/
 
 	// Load ds.Acl map in memory
-	if err := ds.Init(opts.AclDSFactory, opts.Acl); err != nil {
+	if (opts.AclDSFactory == nil) || (opts.Acl == nil) {
+		fmt.Println("ACL... Not loaded")
+	} else if err := ds.Init(opts.AclDSFactory, opts.Acl); err != nil {
 		return err
 	} else if *opts.Verbose {
 		fmt.Println("ACL... OK")

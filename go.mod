@@ -8,6 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/huandu/go-sqlbuilder v1.16.0
+	github.com/lib/pq v1.10.9
 	github.com/spf13/viper v1.11.0
 	golang.org/x/crypto v0.7.0
 	gopkg.in/mail.v2 v2.3.1

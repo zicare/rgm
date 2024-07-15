@@ -64,7 +64,7 @@ func _init() {
 	msg["18"] = New("18", "No found!")
 	msg["19"] = New("19", "There are validation errors")
 	msg["20"] = New("20", "TPS precision must be between %s and %s")
-	msg["21"] = New("21", "TTPS data clean up cycle freq must be between %s and %s minutes")
+	msg["21"] = New("21", "TPS data clean up cycle freq must be between %s and %s minutes")
 	msg["22"] = New("22", "Time %s has a wrong format, required format is %s")
 	msg["23"] = New("23", "Value is a %s, required type is %s")
 	msg["24"] = New("24", "Value %s didn't pass %s(%s) validation")
