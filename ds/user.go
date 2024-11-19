@@ -40,3 +40,15 @@ func UID(c *gin.Context) string {
 	}
 	return ""
 }
+
+// Returns the authenticated Role or empty
+// string if authentication was skipped.
+func Role(c *gin.Context) string {
+
+	if u, exists := c.Get("User"); !exists {
+		return ""
+	} else if u, ok := u.(User); ok {
+		return u.Role
+	}
+	return ""
+}
