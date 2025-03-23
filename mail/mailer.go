@@ -23,8 +23,9 @@ type Message struct {
 func (msg *Message) Send(iteration int) {
 
 	if iteration > config.Config().GetInt("smtp.retries") {
-		glog.Error(errors.New("Could not send email"))
-		glog.Error(errors.New("Exceeded retries"))
+		glog.Error(errors.New("could not send email"))
+		glog.Error(errors.New("exceeded retries"))
+		glog.Flush()
 		return
 	}
 
@@ -39,8 +40,9 @@ func (msg *Message) Send(iteration int) {
 		)
 
 		if err := t.Execute(&tpl, msg.Data); err != nil {
-			glog.Error(errors.New("Could not send  email"))
+			glog.Error(errors.New("could not send email"))
 			glog.Error(err)
+			glog.Flush()
 			return
 		}
 

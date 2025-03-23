@@ -59,7 +59,12 @@ func (qo *QueryOptions) SetLimit(limit *int) *QueryOptions {
 }
 */
 
-func (qo *QueryOptions) Copy(dsrc IDataSource, params Params) *QueryOptions {
+func (qo *QueryOptions) Copy(dsrc IDataSource, params Params, paramTypes ...ParamType) *QueryOptions {
+
+	paramType := Primary // Default paramType value
+	if len(paramTypes) > 0 {
+		paramType = paramTypes[0] // Use the first optional parameter
+	}
 
 	cqo := new(QueryOptions)
 
@@ -68,7 +73,7 @@ func (qo *QueryOptions) Copy(dsrc IDataSource, params Params) *QueryOptions {
 	cqo.User = qo.User
 	cqo.DataSource = dsrc
 	_, cqo.Fields, _, _ = Meta(dsrc)
-	cqo.Equal[Primary] = params
+	cqo.Equal[paramType] = params
 	cqo.Dig = qo.Dig
 
 	return cqo

@@ -64,14 +64,17 @@ func Init(opts InitOpts) error {
 		return err
 	} else if fi, err := os.Stat(dir + "/config"); err != nil || !fi.IsDir() {
 		return err
+	} else if fi, err := os.Stat(dir + "/certs"); err != nil || !fi.IsDir() {
+		return err
 	} else if fi, err := os.Stat(dir + "/tpl"); err != nil || !fi.IsDir() {
 		return err
 	} else if fi, err := os.Stat(dir + "/log"); err != nil || !fi.IsDir() {
 		return err
-	} else {
-		flag.Set("log_dir", dir+"/log")
-		flag.Set("stderrthreshold", "FATAL")
+	} else if *opts.Verbose {
+		fmt.Println("Directories: config, certs, tpl and log... OK")
 	}
+	flag.Set("log_dir", dir+"/log")
+	flag.Set("stderrthreshold", "FATAL")
 
 	// Config
 	if err := config.Init(*opts.Environment, dir); err != nil {
