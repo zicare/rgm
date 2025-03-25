@@ -11,7 +11,7 @@ import (
 	"gopkg.in/mail.v2"
 )
 
-//Message exported
+// Message exported
 type Message struct {
 	To      string
 	Subject string
@@ -19,7 +19,7 @@ type Message struct {
 	Data    interface{}
 }
 
-//Send exported
+// Send exported
 func (msg *Message) Send(iteration int) {
 
 	if iteration > config.Config().GetInt("smtp.retries") {
@@ -55,6 +55,9 @@ func (msg *Message) Send(iteration int) {
 			c.GetString("smtp.user"), c.GetString("smtp.password"))
 		d.Timeout = c.GetDuration("smtp.timeout")
 		if err := d.DialAndSend(m); err != nil {
+			glog.Error(errors.New("*mail.Dialer.DialAndSend error"))
+			glog.Error(err)
+			glog.Flush()
 			duration, _ := time.ParseDuration(config.Config().GetString("smtp.retry_interval"))
 			time.Sleep(duration)
 			msg.Send(iteration + 1)
