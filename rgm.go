@@ -19,12 +19,13 @@ import (
 )
 
 type InitOpts struct {
-	Environment  *string
-	DisableAgent *bool
-	Verbose      *bool
-	Messages     []msg.Message
-	AclDSFactory ds.AclDSFactory
-	Acl          ds.IDataSource
+	Environment   *string
+	DisableAgent  *bool
+	SkipModeCheck *bool
+	Verbose       *bool
+	Messages      []msg.Message
+	AclDSFactory  ds.AclDSFactory
+	Acl           ds.IDataSource
 }
 
 // Returns a gin.HandlersChain slice loaded with
