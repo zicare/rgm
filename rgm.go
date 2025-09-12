@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/zicare/rgm/config"
@@ -19,13 +18,12 @@ import (
 )
 
 type InitOpts struct {
-	Environment   *string
-	DisableAgent  *bool
-	SkipModeCheck *bool
-	Verbose       *bool
-	Messages      []msg.Message
-	AclDSFactory  ds.AclDSFactory
-	Acl           ds.IDataSource
+	Environment  *string
+	EnableTPS    *bool
+	Verbose      *bool
+	Messages     []msg.Message
+	AclDSFactory ds.AclDSFactory
+	Acl          ds.IDataSource
 }
 
 // Returns a gin.HandlersChain slice loaded with
@@ -65,14 +63,12 @@ func Init(opts InitOpts) error {
 		return err
 	} else if fi, err := os.Stat(dir + "/config"); err != nil || !fi.IsDir() {
 		return err
-	} else if fi, err := os.Stat(dir + "/certs"); err != nil || !fi.IsDir() {
-		return err
 	} else if fi, err := os.Stat(dir + "/tpl"); err != nil || !fi.IsDir() {
 		return err
 	} else if fi, err := os.Stat(dir + "/log"); err != nil || !fi.IsDir() {
 		return err
 	} else if *opts.Verbose {
-		fmt.Println("Directories: config, certs, tpl and log... OK")
+		fmt.Println("Directories: config, tpl and log... OK")
 	}
 	flag.Set("log_dir", dir+"/log")
 	flag.Set("stderrthreshold", "FATAL")
@@ -121,15 +117,12 @@ func Init(opts InitOpts) error {
 	fmt.Println("JWT revokes... OK")
 
 	// Initialize tps control
-	if err = tps.Init(); err != nil {
+	if opts.EnableTPS == nil || !*opts.EnableTPS {
+		fmt.Println("TPS... Not loaded")
+	} else if err = tps.Init(); err != nil {
 		return err
 	} else {
 		fmt.Println("TPS control... OK")
-	}
-
-	// Agent
-	if *opts.Verbose {
-		fmt.Println("Agent enabled..." + strconv.FormatBool(!*opts.DisableAgent))
 	}
 
 	//  Custom validation
