@@ -23,14 +23,26 @@ const (
 	Qry
 )
 
+type DigSpec struct {
+	Key        string      // ?dig=Key (json of the db:"-" field)
+	FieldIndex int         // index of the *Target field in the parent struct
+	FK         []string    // base-table FK columns, from tag fk:"loan_id,installment"
+	PK         []string    // target model PK columns, in order (from Meta(Target))
+	Target     IDataSource // zero-value related model (*T)
+
+	FKFieldIdx []int // field indexes on the BASE struct for each FK
+	PKFieldIdx []int // field indexes on the TARGET struct for each PK
+}
+
 // QueryOpts exported
 type QueryOptions struct {
 	User             User
 	DataSource       IDataSource
 	Fields           []string
 	WritableFields   []string
+	DigableFields    map[string]int
 	Checksum         int
-	Dig              []string
+	Dig              []DigSpec
 	Equal            map[ParamType]Params
 	IsNull           []string
 	IsNotNull        []string
@@ -44,39 +56,7 @@ type QueryOptions struct {
 	Order            []string
 	Offset           int
 	Limit            *int
-}
-
-/*
-func (qo *QueryOptions) IsPrimary() bool {
-
-	return len(qo.Equal[Primary]) > 0
-}
-
-func (qo *QueryOptions) SetLimit(limit *int) *QueryOptions {
-
-	qo.Limit = limit
-	return qo
-}
-*/
-
-func (qo *QueryOptions) Copy(dsrc IDataSource, params Params, paramTypes ...ParamType) *QueryOptions {
-
-	paramType := Primary // Default paramType value
-	if len(paramTypes) > 0 {
-		paramType = paramTypes[0] // Use the first optional parameter
-	}
-
-	cqo := new(QueryOptions)
-
-	cqo.Equal = make(map[ParamType]Params)
-
-	cqo.User = qo.User
-	cqo.DataSource = dsrc
-	_, cqo.Fields, _, _ = Meta(dsrc)
-	cqo.Equal[paramType] = params
-	cqo.Dig = qo.Dig
-
-	return cqo
+	Ctx              *gin.Context
 }
 
 // QueryOptsFactory exported
@@ -84,7 +64,7 @@ func QOFactory(c *gin.Context, d IDataSource) (*QueryOptions, *TagError) {
 
 	qo := new(QueryOptions)
 
-	keys, flds, wflds, err := Meta(d)
+	keys, flds, wflds, dflds, err := Meta(d)
 	if err != nil {
 		return qo, err
 	}
@@ -99,10 +79,12 @@ func QOFactory(c *gin.Context, d IDataSource) (*QueryOptions, *TagError) {
 		upar[up.Key] = up.Value
 	}
 
+	qo.Ctx = c
 	qo.setUser(c)
 	qo.DataSource = d
 	qo.Fields = flds
 	qo.WritableFields = wflds
+	qo.DigableFields = dflds
 	qo.setChecksum(qpar)
 	qo.setDig(qpar)
 
@@ -144,15 +126,6 @@ func (qo *QueryOptions) setChecksum(qpar qparams) {
 
 	if checksum, ok := qpar["checksum"]; ok && (checksum[0] == "1") {
 		qo.Checksum = 1
-	}
-}
-
-func (qo *QueryOptions) setDig(qpar qparams) {
-
-	qo.Dig = []string{}
-
-	if dig, ok := qpar["dig"]; ok {
-		qo.Dig = dig
 	}
 }
 

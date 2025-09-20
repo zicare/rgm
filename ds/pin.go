@@ -32,7 +32,7 @@ func (p Pin) Send() {
 
 	msg := new(mail.Message)
 	msg.To = p.Email
-	msg.Subject = "Has recibido un PIN"
+	msg.Subject = config.Config().GetString("account.pins_email_subject")
 	msg.Tpl = "pin.tpl"
 	msg.Data = struct{ PIN string }{PIN: p.Code}
 	msg.Send(1)

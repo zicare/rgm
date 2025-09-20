@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
+	"reflect"
 
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/zicare/rgm/ds"
@@ -49,6 +50,13 @@ func (Table) Find(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data interface{},
 	// execute query
 	if err := Db().QueryRow(q, args...).Scan(s.Addr(&t)...); err == sql.ErrNoRows {
 		return meta, data, new(ds.NotFoundError)
+	} else if err != nil {
+		return meta, data, err
+	}
+
+	// NEW: hydrate requested digs (parents) into the base record
+	if err := hydrateDigsOne(qo); err != nil {
+		return meta, data, err
 	}
 
 	// run after select
@@ -64,4 +72,52 @@ func (Table) Find(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data interface{},
 	}
 
 	return meta, qo.DataSource, nil
+}
+
+// hydrateDigsOne populates qo.DataSource's diggable fields for a single base row.
+func hydrateDigsOne(qo *ds.QueryOptions) error {
+	if len(qo.Dig) == 0 {
+		return nil
+	}
+	br := reflect.Indirect(reflect.ValueOf(qo.DataSource))
+
+	for _, dig := range qo.Dig {
+		// collect FK values from precomputed field indexes
+		vals := make([]interface{}, len(dig.FKFieldIdx))
+		skip := false
+		for i, fi := range dig.FKFieldIdx {
+			v := br.Field(fi)
+			if v.Kind() == reflect.Ptr {
+				if v.IsNil() {
+					skip = true
+					break
+				}
+				v = v.Elem()
+			}
+			vals[i] = v.Interface()
+		}
+		if skip {
+			continue // no parent → best-effort skip
+		}
+
+		// query target by PKs = collected FKs
+		s2 := sqlbuilder.NewStruct(dig.Target)
+		b2 := s2.SelectFrom(dig.Target.Name())
+		b2.Select(s2.Columns()...)
+		for i, pk := range dig.PK {
+			b2.Where(b2.Equal(pk, vals[i]))
+		}
+		q2, a2 := b2.Build()
+
+		if err := Db().QueryRow(q2, a2...).Scan(s2.Addr(&dig.Target)...); err != nil {
+			if err == sql.ErrNoRows {
+				continue
+			}
+			return err
+		}
+
+		// set the dig field on the base struct
+		br.Field(dig.FieldIndex).Set(reflect.ValueOf(dig.Target))
+	}
+	return nil
 }

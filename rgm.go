@@ -128,5 +128,9 @@ func Init(opts InitOpts) error {
 	//  Custom validation
 	validation.Init()
 
+	//Run deferred inits
+	//used to populate the backend meta registry
+	ds.RunDeferredInits()
+
 	return nil
 }

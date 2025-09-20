@@ -2,38 +2,61 @@ package ds
 
 import (
 	"reflect"
+	"strings"
+
+	"github.com/zicare/rgm/msg"
 )
 
-func Meta(d IDataSource) (k, f, w []string, e *TagError) {
+func Meta(m IDataSource) (k, f, w []string, d map[string]int, e *TagError) {
 
-	//r := reflect.ValueOf(d).Elem()
-	r := reflect.Indirect(reflect.ValueOf(d))
+	d = make(map[string]int)
+
+	//r := reflect.ValueOf(m).Elem()
+	r := reflect.Indirect(reflect.ValueOf(m))
+	rt := r.Type()
 	for i := 0; i < r.NumField(); i++ {
-		if db, ok := r.Type().Field(i).Tag.Lookup("db"); ok && db != "-" {
+		tag := rt.Field(i).Tag
+		if db, ok := tag.Lookup("db"); ok {
+			if db == "-" {
+				// diggable only if it ALSO has fk:"..."
+				if fk, ok := tag.Lookup("fk"); ok && fk != "" {
+					if j, ok := tag.Lookup("json"); ok {
+						if j, _, _ := strings.Cut(j, ","); j != "" && j != "-" {
+							d[j] = i
+						}
+					}
+				}
+				continue
+			}
+			// normal field
 			f = append(f, db)
-			if pk, ok := r.Type().Field(i).Tag.Lookup("pk"); ok && pk == "1" {
+			if pk, ok := tag.Lookup("pk"); ok && pk == "1" {
 				k = append(k, db)
 			}
-			if _, ok := r.Type().Field(i).Tag.Lookup("view"); !ok {
+			if _, ok := tag.Lookup("view"); !ok {
 				w = append(w, db)
 			}
 		}
 	}
 
 	if len(k) == 0 {
-		return k, f, w, new(TagError)
+		return k, f, w, d, &TagError{Message: msg.Message{Msg: "no pk tags in model"}}
 	}
-
-	return k, f, w, nil
+	if e = ValidateTags(m, k, f); e != nil {
+		return k, f, w, d, e
+	}
+	return k, f, w, d, nil
 }
 
 func Values(d IDataSource) map[string]interface{} {
 
 	v := make(map[string]interface{})
 	r := reflect.Indirect(reflect.ValueOf(d))
+	rt := r.Type()
 	for i := 0; i < r.NumField(); i++ {
-		if db, ok := r.Type().Field(i).Tag.Lookup("db"); ok && db != "-" {
-			if _, ok := r.Type().Field(i).Tag.Lookup("view"); !ok {
+		tag := rt.Field(i).Tag
+		if db, ok := tag.Lookup("db"); ok && db != "-" {
+			if _, ok := tag.Lookup("view"); !ok {
 				v[db] = r.Field(i).Interface()
 			}
 		}
@@ -41,27 +64,6 @@ func Values(d IDataSource) map[string]interface{} {
 
 	return v
 }
-
-/*
-func dsWrite(d IDataSource) (fld []string, val []interface{}, e *TagError) {
-
-	v := reflect.ValueOf(d).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		if db, ok := v.Type().Field(i).Tag.Lookup("db"); ok && (db != "-") {
-			if _, ok := v.Type().Field(i).Tag.Lookup("view"); !ok {
-				fld = append(fld, db)
-				val = append(val, v.Field(i).Interface())
-			}
-		}
-	}
-
-	if len(fld) == 0 {
-		return fld, val, new(TagError)
-	}
-
-	return fld, val, nil
-}
-*/
 
 // Works on structs with two tag sets, let's call them target and pivot.
 //
@@ -78,23 +80,25 @@ func dsWrite(d IDataSource) (fld []string, val []interface{}, e *TagError) {
 //
 // Example:
 //
-// type User struct {
-//	 UserID    int64     `db:"user_id"   auth:"id"    json:"user_id"   pk:"1"`
-//	 RoleID    *int64    `db:"role_id"   auth:"role"  json:"role_id"`
-//	 Email     string    `db:"email"     auth:"usr"   json:"email"`
-// }
+//	type User struct {
+//		 UserID    int64     `db:"user_id"   auth:"id"    json:"user_id"   pk:"1"`
+//		 RoleID    *int64    `db:"role_id"   auth:"role"  json:"role_id"`
+//		 Email     string    `db:"email"     auth:"usr"   json:"email"`
+//	}
 //
 // fields, _ := TagFieldsPivoted(new(User), "auth", []string{"id","role","usr"})
 // fields -> []string{"user_id","role_id","email"}
-//
 func TagValuesPivoted(dsrc IDataSource, targetTagKey string, pivotTagKey string, pivotTagValues []string) ([]string, *TagError) {
 
 	targetTagValues := make([]string, len(pivotTagValues))
 
-	t := reflect.ValueOf(dsrc).Elem()
-	for i := 0; i < t.NumField(); i++ {
-		if ptv, ok := t.Type().Field(i).Tag.Lookup(pivotTagKey); ok {
-			if ttv, ok := t.Type().Field(i).Tag.Lookup(targetTagKey); ok && ttv != "-" {
+	//r := reflect.ValueOf(dsrc).Elem()
+	r := reflect.Indirect(reflect.ValueOf(dsrc))
+	rt := r.Type()
+	for i := 0; i < r.NumField(); i++ {
+		tag := rt.Field(i).Tag
+		if ptv, ok := tag.Lookup(pivotTagKey); ok {
+			if ttv, ok := tag.Lookup(targetTagKey); ok && ttv != "-" {
 				for j, v := range pivotTagValues {
 					if v == ptv {
 						targetTagValues[j] = ttv
@@ -106,85 +110,9 @@ func TagValuesPivoted(dsrc IDataSource, targetTagKey string, pivotTagKey string,
 
 	for _, f := range targetTagValues {
 		if f == "" {
-			return targetTagValues, new(TagError)
+			return targetTagValues, &TagError{Message: msg.Message{Msg: "incorrect pivot tags in model"}}
 		}
 	}
 
 	return targetTagValues, nil
 }
-
-/*
-func TaggedFields(tbl IDataSource, tagName string, tagValues []string) ([]string, *TagError) {
-
-	var (
-		f = make([]string, len(tagValues))
-		t = reflect.ValueOf(tbl).Elem()
-	)
-
-	for i := 0; i < t.NumField(); i++ {
-		if tag, ok := t.Type().Field(i).Tag.Lookup(tagName); ok {
-			if col, ok := t.Type().Field(i).Tag.Lookup("db"); ok {
-				for i, v := range tagValues {
-					if v == tag {
-						f[i] = col
-					}
-				}
-			}
-		}
-	}
-
-	for _, col := range f {
-		if col == "" {
-			return f, new(TagError)
-		}
-	}
-
-	return f, nil
-}
-
-// Returns a slice of db fields tagged as `pk:"1"`
-func Pk(tbl IDataSource) (f []string) {
-
-	t := reflect.ValueOf(tbl).Elem()
-
-	for i := 0; i < t.NumField(); i++ {
-		if pk, ok := t.Type().Field(i).Tag.Lookup("pk"); ok && pk == "1" {
-			if db, ok := t.Type().Field(i).Tag.Lookup("db"); ok && db != "-" {
-				f = append(f, db)
-			}
-		}
-	}
-
-	return f
-}
-
-// Returns a slice of db fields tagged as `pk:"1"`
-func Cols(tbl IDataSource) (f []string) {
-
-	t := reflect.ValueOf(tbl).Elem()
-
-	for i := 0; i < t.NumField(); i++ {
-		if db, ok := t.Type().Field(i).Tag.Lookup("db"); ok && db != "-" {
-			f = append(f, db)
-		}
-	}
-	return f
-}
-
-func Binding(tbl IDataSource, field string) string {
-
-	//t.Field(i).SetString("x")
-
-	t := reflect.ValueOf(tbl).Elem()
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Type().Field(i)
-		if json, ok := f.Tag.Lookup("json"); ok && json == field {
-			if binding, ok := f.Tag.Lookup("binding"); ok {
-				return binding
-			}
-			return ""
-		}
-	}
-	return ""
-}
-*/
