@@ -89,6 +89,16 @@ func (Table) Fetch(qo *ds.QueryOptions) (meta ds.ResultSetMeta, data []interface
 		b.Where(b.LessEqualThan(k, v))
 	}
 
+	// set where Like
+	for k, v := range qo.Like {
+		b.Where(b.ILike(k, v))
+	}
+
+	// set where NotLike
+	for k, v := range qo.NotLike {
+		b.Where(b.NotILike(k, v))
+	}
+
 	// get total count
 	total := 0
 	b.Select(b.As("COUNT(*)", "t"))

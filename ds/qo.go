@@ -53,6 +53,8 @@ type QueryOptions struct {
 	LessThan         Params
 	GreaterEqualThan Params
 	LessEqualThan    Params
+	Like             Params
+	NotLike          Params
 	Order            []string
 	Offset           int
 	Limit            *int
@@ -103,6 +105,8 @@ func QOFactory(c *gin.Context, d IDataSource) (*QueryOptions, *TagError) {
 	qo.setLessThan(qpar, flds)
 	qo.setGreaterEqualThan(qpar, flds)
 	qo.setLessEqualThan(qpar, flds)
+	qo.setLike(qpar, flds)
+	qo.setNotLike(qpar, flds)
 	qo.setOrder(qpar, flds)
 	qo.setOffset(qpar)
 	qo.setLimit(qpar)
@@ -304,6 +308,34 @@ func (qo *QueryOptions) setLessEqualThan(qpar qparams, flds []string) {
 			j := strings.Split(k, "|")
 			if lib.Contains(flds, j[0]) {
 				qo.LessEqualThan[j[0]] = j[1]
+			}
+		}
+	}
+}
+
+func (qo *QueryOptions) setLike(qpar qparams, flds []string) {
+
+	qo.Like = make(Params)
+
+	if like, ok := qpar["like"]; ok {
+		for _, k := range like {
+			j := strings.Split(k, "|")
+			if lib.Contains(flds, j[0]) {
+				qo.Like[j[0]] = j[1]
+			}
+		}
+	}
+}
+
+func (qo *QueryOptions) setNotLike(qpar qparams, flds []string) {
+
+	qo.NotLike = make(Params)
+
+	if notlike, ok := qpar["notlike"]; ok {
+		for _, k := range notlike {
+			j := strings.Split(k, "|")
+			if lib.Contains(flds, j[0]) {
+				qo.NotLike[j[0]] = j[1]
 			}
 		}
 	}
