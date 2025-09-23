@@ -9,10 +9,10 @@ import (
 	"github.com/zicare/rgm/msg"
 )
 
-//JwtController exported
+// JwtController exported
 type JwtController struct{}
 
-//Get exported
+// Get exported
 func (ctrl JwtController) Get(c *gin.Context) {
 
 	if u, ok := c.Get("User"); !ok {
@@ -31,7 +31,7 @@ func (ctrl JwtController) Get(c *gin.Context) {
 
 	} else {
 
-		j := jwt.JWTFactory(u.UID, u.Role, u.Type, u.TPS, u.From, u.To)
+		j := jwt.JWTFactory(u.UID, u.Role, u.Type, u.From, u.To)
 		c.JSON(
 			http.StatusOK,
 			gin.H{"header": j.GetHeader(), "payload": j.GetPayload(), "token": j.ToString()},

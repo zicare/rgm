@@ -4,7 +4,7 @@ import "fmt"
 
 var msg map[string]Message
 
-//Init exported
+// Init exported
 func Init(m []Message) (err error) {
 
 	_init()
@@ -21,17 +21,17 @@ func Init(m []Message) (err error) {
 	return nil
 }
 
-//New exported
+// New exported
 func New(k string, m string) Message {
 	return Message{k, m, nil, ""}
 }
 
-//GetAll exported
+// GetAll exported
 func GetAll() map[string]Message {
 	return msg
 }
 
-//Get exported
+// Get exported
 func Get(key string) Message {
 
 	if message, ok := msg[key]; ok {
@@ -53,7 +53,7 @@ func _init() {
 	msg["7"] = New("7", "JWT authorization header malformed")
 	msg["8"] = New("8", "Not enough permissions")
 	msg["9"] = New("9", "Role access expired or not yet valid")
-	msg["10"] = New("10", "TPS limit exceeded, access void until %s")
+	//msg["10"]
 	msg["11"] = New("11", "Unauthorized")
 	msg["12"] = New("12", "Invalid token")
 	msg["13"] = New("13", "Invalid payload")
@@ -63,8 +63,8 @@ func _init() {
 	msg["17"] = New("17", "Decoding Error %s")
 	msg["18"] = New("18", "No found!")
 	msg["19"] = New("19", "There are validation errors")
-	msg["20"] = New("20", "TPS precision must be between %s and %s")
-	msg["21"] = New("21", "TPS data clean up cycle freq must be between %s and %s minutes")
+	//msg["20"]
+	//msg["21"]
 	msg["22"] = New("22", "Time %s has a wrong format, required format is %s")
 	msg["23"] = New("23", "Value is a %s, required type is %s")
 	msg["24"] = New("24", "Value %s didn't pass %s(%s) validation")
@@ -73,8 +73,8 @@ func _init() {
 	msg["27"] = New("27", "Couldn't retrieve Gin's default validator engine")
 	msg["28"] = New("28", "Unauthorized app")
 	msg["29"] = New("29", "%s row(s) deleted")
-	//msg["30"] = New("30", "Auth tags no set")
-	msg["31"] = New("31", "TPS penalty factor must be between %s and %s")
+	//msg["30"]
+	//msg["31"]
 	msg["32"] = New("32", "Token revoked")
 	msg["33"] = New("33", "PIN request accepted")
 	msg["34"] = New("34", "DB Insert error")
@@ -87,5 +87,5 @@ func _init() {
 	msg["41"] = New("41", "%s resource(s) updated!")
 	msg["42"] = New("42", "Can't add or update a child resource, revise parent's keys.")
 	msg["43"] = New("43", "Duplicated entry.")
-	//msg["29"] = New("33", "CORS tags are not properly set")
+	//msg["29"]
 }

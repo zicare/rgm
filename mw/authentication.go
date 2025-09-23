@@ -68,7 +68,7 @@ func JWTAuthentication() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
-		if token := strings.Split(c.GetHeader("Authorization"), " "); (len(token) != 2) || (token[0] != "JWT") {
+		if token := strings.Split(c.GetHeader("Authorization"), " "); (len(token) != 2) || (token[0] != "Bearer") {
 
 			c.AbortWithStatusJSON(
 				http.StatusUnauthorized,
@@ -119,7 +119,6 @@ func JWTAuthentication() gin.HandlerFunc {
 					UID:  payload.UID,
 					Type: payload.Type,
 					Role: payload.Role,
-					TPS:  payload.TPS,
 					From: payload.Iat,
 					To:   payload.Exp,
 				})

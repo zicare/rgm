@@ -1,5 +1,5 @@
 {
-    "env": "example",
+    "env": "development",
     "pepper": "secret-random-string",
     "hmac_key": "secret-hmac-key",
     "jwt_duration" : "1h",
@@ -7,7 +7,11 @@
     "server" : {
         "ip": "127.0.0.1",
         "domain": "localhost",
-        "port": 8080
+        "port": 8080,
+        "ssl": {
+            "cert": "",
+            "key": ""
+        }
     },
     "db": {
         "host": "localhost",
@@ -24,10 +28,11 @@
         "password": "secret",
         "retries": 3,
         "retry_interval": "1m",
-		"timeout": 30000000000
+        "timeout": 30000000000
     },
     "account": {
         "pins_length": 5,
+        "pins_email_subject": "Password Reset Request - Your PIN Inside",
         "pwd_validation": "required,min=8"
     },
     "tps": {

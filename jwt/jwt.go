@@ -24,13 +24,12 @@ type Payload struct {
 	UID  string    `json:"uid"`
 	Type string    `json:"type"`
 	Role string    `json:"role"`
-	TPS  float32   `json:"tps"`
 	Iat  time.Time `json:"iat"`
 	Exp  time.Time `json:"exp"`
 }
 
 // Returns token and exp for an auth.User
-func JWTFactory(uid string, role string, t string, tps float32, iat time.Time, exp time.Time) JWT {
+func JWTFactory(uid string, role string, t string, iat time.Time, exp time.Time) JWT {
 
 	var (
 		now         = time.Now()
@@ -51,7 +50,6 @@ func JWTFactory(uid string, role string, t string, tps float32, iat time.Time, e
 		UID:  uid,
 		Type: t,
 		Role: role,
-		TPS:  tps,
 		Iat:  iat,
 		Exp:  exp,
 	})

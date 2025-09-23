@@ -13,7 +13,6 @@ type User struct {
 	Pwd  string    `json:"pwd"`
 	Type string    `json:"type"`
 	Role string    `json:"role"`
-	TPS  float32   `json:"tps"`
 	From time.Time `json:"from"`
 	To   time.Time `json:"to"`
 }

@@ -13,13 +13,11 @@ import (
 	"github.com/zicare/rgm/lib"
 	"github.com/zicare/rgm/msg"
 	"github.com/zicare/rgm/mw"
-	"github.com/zicare/rgm/tps"
 	"github.com/zicare/rgm/validation"
 )
 
 type InitOpts struct {
 	Environment  *string
-	EnableTPS    *bool
 	Verbose      *bool
 	Messages     []msg.Message
 	AclDSFactory ds.AclDSFactory
@@ -39,7 +37,6 @@ func BHC(fn ds.UserDSFactory, u ds.IDataSource, crypto lib.ICrypto, h gin.Handle
 
 	handlersChain := gin.HandlersChain{}
 	handlersChain = append(handlersChain, mw.BasicAuthentication(dsrc, crypto))
-	handlersChain = append(handlersChain, mw.Abuse())
 	return append(handlersChain, h)
 }
 
@@ -50,7 +47,6 @@ func JHC(h gin.HandlerFunc) gin.HandlersChain {
 
 	handlersChain := gin.HandlersChain{}
 	handlersChain = append(handlersChain, mw.JWTAuthentication())
-	handlersChain = append(handlersChain, mw.Abuse())
 	handlersChain = append(handlersChain, mw.Authorization())
 	return append(handlersChain, h)
 }
@@ -94,15 +90,6 @@ func Init(opts InitOpts) error {
 		fmt.Println("MSG... OK")
 	}
 
-	/*
-		// MySQL
-		if err := mysql.Init(); err != nil {
-			return err
-		} else if *opts.Verbose {
-			fmt.Println("MySQL... OK")
-		}
-	*/
-
 	// Load ds.Acl map in memory
 	if (opts.AclDSFactory == nil) || (opts.Acl == nil) {
 		fmt.Println("ACL... Not loaded")
@@ -115,15 +102,6 @@ func Init(opts InitOpts) error {
 	// Initialize jwt.revokedJWTMap
 	jwt.Init()
 	fmt.Println("JWT revokes... OK")
-
-	// Initialize tps control
-	if opts.EnableTPS == nil || !*opts.EnableTPS {
-		fmt.Println("TPS... Not loaded")
-	} else if err = tps.Init(); err != nil {
-		return err
-	} else {
-		fmt.Println("TPS control... OK")
-	}
 
 	//  Custom validation
 	validation.Init()
