@@ -13,7 +13,7 @@ import (
 
 var db *sql.DB
 
-//Init tests the db connection and saves the db handler
+// Init tests the db connection and saves the db handler
 func Init() error {
 
 	var (
@@ -42,7 +42,7 @@ func Init() error {
 	return nil
 }
 
-//Db returns the db handler
+// Db returns the db handler
 func Db() *sql.DB {
 
 	if db != nil {

@@ -14,6 +14,7 @@ import (
 // Message exported
 type Message struct {
 	To      string
+	ToN     []string
 	Subject string
 	Tpl     string
 	Data    interface{}
@@ -48,7 +49,7 @@ func (msg *Message) Send(iteration int) {
 
 		m = mail.NewMessage()
 		m.SetHeader("From", c.GetString("smtp.user"))
-		m.SetHeader("To", msg.To)
+		m.SetHeader("To", msg.recipients()...)
 		m.SetHeader("Subject", msg.Subject)
 		m.SetBody("text/html", tpl.String())
 		d = mail.NewDialer(c.GetString("smtp.host"), c.GetInt("smtp.port"),
@@ -63,4 +64,34 @@ func (msg *Message) Send(iteration int) {
 			msg.Send(iteration + 1)
 		}
 	}(msg, iteration)
+}
+
+func (msg *Message) recipients() []string {
+
+	var (
+		seen = map[string]bool{}
+		rcpt []string
+	)
+
+	// Prefer ToN if present
+	if len(msg.ToN) > 0 {
+		for _, to := range msg.ToN {
+			if to == "" {
+				continue
+			}
+			if seen[to] {
+				continue
+			}
+			seen[to] = true
+			rcpt = append(rcpt, to)
+		}
+		return rcpt
+	}
+
+	// Fallback to To
+	if msg.To != "" {
+		rcpt = append(rcpt, msg.To)
+	}
+
+	return rcpt
 }
