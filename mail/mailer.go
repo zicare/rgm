@@ -15,6 +15,8 @@ import (
 type Message struct {
 	To      string
 	ToN     []string
+	Cc      []string
+	Bcc     []string
 	Subject string
 	Tpl     string
 	Data    interface{}
@@ -49,7 +51,9 @@ func (msg *Message) Send(iteration int) {
 
 		m = mail.NewMessage()
 		m.SetHeader("From", c.GetString("smtp.user"))
-		m.SetHeader("To", msg.recipients()...)
+		m.SetHeader("To", msg.to()...)
+		m.SetHeader("Cc", msg.cc()...)
+		m.SetHeader("Bcc", msg.bcc()...)
 		m.SetHeader("Subject", msg.Subject)
 		m.SetBody("text/html", tpl.String())
 		d = mail.NewDialer(c.GetString("smtp.host"), c.GetInt("smtp.port"),
@@ -66,7 +70,7 @@ func (msg *Message) Send(iteration int) {
 	}(msg, iteration)
 }
 
-func (msg *Message) recipients() []string {
+func (msg *Message) to() []string {
 
 	var (
 		seen = map[string]bool{}
@@ -91,6 +95,70 @@ func (msg *Message) recipients() []string {
 	// Fallback to To
 	if msg.To != "" {
 		rcpt = append(rcpt, msg.To)
+	}
+
+	return rcpt
+}
+
+func (msg *Message) cc() []string {
+
+	var (
+		seen = map[string]bool{}
+		rcpt []string
+	)
+
+	// Seed seen with To recipients so we don't duplicate addresses across headers.
+	for _, to := range msg.to() {
+		if to == "" {
+			continue
+		}
+		seen[to] = true
+	}
+
+	for _, cc := range msg.Cc {
+		if cc == "" {
+			continue
+		}
+		if seen[cc] {
+			continue
+		}
+		seen[cc] = true
+		rcpt = append(rcpt, cc)
+	}
+
+	return rcpt
+}
+
+func (msg *Message) bcc() []string {
+
+	var (
+		seen = map[string]bool{}
+		rcpt []string
+	)
+
+	// Seed seen with To + Cc so we don't duplicate addresses across headers.
+	for _, to := range msg.to() {
+		if to == "" {
+			continue
+		}
+		seen[to] = true
+	}
+	for _, cc := range msg.cc() {
+		if cc == "" {
+			continue
+		}
+		seen[cc] = true
+	}
+
+	for _, bcc := range msg.Bcc {
+		if bcc == "" {
+			continue
+		}
+		if seen[bcc] {
+			continue
+		}
+		seen[bcc] = true
+		rcpt = append(rcpt, bcc)
 	}
 
 	return rcpt
