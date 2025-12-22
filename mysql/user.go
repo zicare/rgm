@@ -14,6 +14,7 @@ import (
 type userDataSource struct {
 	t ITable
 	f []string
+	x bool
 }
 
 // UserDSFactory returns an object that implements user.IUserDataSource.
@@ -27,12 +28,16 @@ func UserDSFactory(user ds.IDataSource) (ds.IUserDataSource, error) {
 	}
 
 	// Verify user tags
-	if f, err := ds.TagValuesPivoted(t, "db", "json", []string{"uid", "role", "usr", "pwd", "from", "to"}); err != nil {
+	if f1, err := ds.TagValuesPivoted(t, "db", "json", []string{"uid", "role", "usr", "pwd", "from", "to"}); err != nil {
 		err.Copy(msg.Get("2").SetArgs("User"))
 		return dsrc, err
-	} else {
-		dsrc.f = f
+	} else if f2, err := ds.TagValuesPivoted(t, "db", "json", []string{"uid", "role", "usr", "pwd", "from", "to", "xid"}); err != nil {
+		dsrc.f = f1
 		dsrc.t = t
+	} else {
+		dsrc.f = f2
+		dsrc.t = t
+		dsrc.x = true
 	}
 
 	return dsrc, nil
@@ -50,10 +55,21 @@ func (dsrc userDataSource) Get(username string) (ds.User, error) {
 	q, args := b.Build()
 
 	// execute query
-	if err := Db().QueryRow(q, args...).Scan(&u.UID, &u.Role, &u.Usr, &u.Pwd, &u.From, &u.To); err == sql.ErrNoRows {
-		return u, new(ds.InvalidCredentials)
-	} else if err != nil {
-		return u, err
+	if dsrc.x {
+		var xid sql.NullString
+		if err := Db().QueryRow(q, args...).Scan(&u.UID, &u.Role, &u.Usr, &u.Pwd, &u.From, &u.To, &xid); err == sql.ErrNoRows {
+			return u, new(ds.InvalidCredentials)
+		} else if err != nil {
+			return u, err
+		} else if xid.Valid {
+			u.XID = &xid.String
+		}
+	} else {
+		if err := Db().QueryRow(q, args...).Scan(&u.UID, &u.Role, &u.Usr, &u.Pwd, &u.From, &u.To); err == sql.ErrNoRows {
+			return u, new(ds.InvalidCredentials)
+		} else if err != nil {
+			return u, err
+		}
 	}
 
 	// verify if credential are expired

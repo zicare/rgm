@@ -31,7 +31,7 @@ func (ctrl JwtController) Get(c *gin.Context) {
 
 	} else {
 
-		j := jwt.JWTFactory(u.UID, u.Role, u.Type, u.From, u.To)
+		j := jwt.JWTFactory(u.UID, u.Role, u.Type, u.From, u.To, u.XID)
 		c.JSON(
 			http.StatusOK,
 			gin.H{"header": j.GetHeader(), "payload": j.GetPayload(), "token": j.ToString()},

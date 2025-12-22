@@ -15,6 +15,7 @@ type User struct {
 	Role string    `json:"role"`
 	From time.Time `json:"from"`
 	To   time.Time `json:"to"`
+	XID  *string   `json:"xid"`
 }
 
 // Defines an interface to retrieve user data

@@ -121,6 +121,7 @@ func JWTAuthentication() gin.HandlerFunc {
 					Role: payload.Role,
 					From: payload.Iat,
 					To:   payload.Exp,
+					XID:  payload.XID,
 				})
 
 			c.Next()
