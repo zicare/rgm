@@ -12,7 +12,7 @@ var acl Acl
 // Acl exported
 type Acl map[Grant]TimeRange
 
-//TimeRange exported
+// TimeRange exported
 type TimeRange struct {
 	From time.Time `json:"from"`
 	To   time.Time `json:"to"`

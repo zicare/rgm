@@ -6,7 +6,7 @@ import (
 	"github.com/zicare/rgm/ds"
 )
 
-//Insert exported
+// Insert exported
 func (Table) Insert(qo *ds.QueryOptions) error {
 
 	t, ok := qo.DataSource.(ITable)

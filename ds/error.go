@@ -9,7 +9,7 @@ import (
 // ValidationErrors exported
 type ValidationErrors msg.MessageList
 
-//Error exported
+// Error exported
 func (ve *ValidationErrors) Error() string {
 
 	jve, _ := json.Marshal(ve)
@@ -63,6 +63,16 @@ type InvalidPinError struct {
 
 // ExpiredPIN exported
 type ExpiredPinError struct {
+	msg.Message
+}
+
+// NotFoundFileError exported
+type NotFoundFileError struct {
+	msg.Message
+}
+
+// InvalidFileError exported
+type InvalidFileError struct {
 	msg.Message
 }
 

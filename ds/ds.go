@@ -31,5 +31,5 @@ type UserDSFactory func(dsrc IDataSource) (IUserDataSource, error)
 // AclDSFactory makes a IAclDataSource from a generic dsrc IDataSource.
 type AclDSFactory func(dsrc IDataSource) (IAclDataSource, error)
 
-// AclDSFactory makes a IPinDataSource from generic p(pin) and u(user) IDataSource's.
+// PinDSFactory makes a IPinDataSource from generic p(pin) and u(user) IDataSource's.
 type PinDSFactory func(p, u IDataSource) (IPinDataSource, error)

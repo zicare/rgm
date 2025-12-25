@@ -52,3 +52,15 @@ func Role(c *gin.Context) string {
 	}
 	return ""
 }
+
+// Returns the authenticated XID if not nil
+// or empty string if authentication was skipped
+func XID(c *gin.Context) string {
+
+	if u, exists := c.Get("User"); !exists {
+		return ""
+	} else if u, ok := u.(User); ok && u.XID != nil {
+		return *u.XID
+	}
+	return ""
+}
